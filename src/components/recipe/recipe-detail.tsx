@@ -2,7 +2,7 @@
 
 import { Recipe } from '@/types';
 import { IngredientList } from './ingredient-list';
-import { StepsList } from './steps-list';
+import { StepsListCollapsible } from './steps-list-collapsible';
 
 interface RecipeDetailProps {
   recipe: Recipe;
@@ -40,7 +40,7 @@ export function RecipeDetail({ recipe }: RecipeDetailProps) {
         </div>
         <div className="lg:col-span-2">
           <h2 className="text-2xl font-semibold mb-4">Preparazione</h2>
-          <StepsList steps={recipe.steps} />
+          <StepsListCollapsible steps={recipe.steps} defaultExpanded={false} />
         </div>
       </div>
 
