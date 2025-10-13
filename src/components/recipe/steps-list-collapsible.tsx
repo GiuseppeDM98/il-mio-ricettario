@@ -76,7 +76,25 @@ export function StepsListCollapsible({ steps, defaultExpanded = false }: StepsLi
                       {globalStepNumber}
                     </div>
                     <div className="flex-1">
-                      <p className="text-gray-800">{step.description}</p>
+                      {(() => {
+                        const lines = step.description.split('\n').filter(line => line.trim());
+                        if (lines.length === 0) return null;
+
+                        if (lines.length === 1) {
+                          return <p className="text-gray-800">{lines[0]}</p>;
+                        }
+
+                        return (
+                          <div className="space-y-2">
+                            {lines.map((line, idx) => (
+                              <div key={idx} className="flex items-start gap-2">
+                                <span className="text-gray-500 mt-1 flex-shrink-0">•</span>
+                                <p className="text-gray-800 flex-1">{line}</p>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })()}
                       {step.duration && (
                         <p className="text-sm text-gray-500 mt-1">
                           Tempo: {step.duration} min
@@ -121,7 +139,25 @@ export function StepsListCollapsible({ steps, defaultExpanded = false }: StepsLi
                         {globalStepNumber}
                       </div>
                       <div className="flex-1">
-                        <p className="text-gray-800">{step.description}</p>
+                        {(() => {
+                          const lines = step.description.split('\n').filter(line => line.trim());
+                          if (lines.length === 0) return null;
+
+                          if (lines.length === 1) {
+                            return <p className="text-gray-800">{lines[0]}</p>;
+                          }
+
+                          return (
+                            <div className="space-y-2">
+                              {lines.map((line, idx) => (
+                                <div key={idx} className="flex items-start gap-2">
+                                  <span className="text-gray-500 mt-1 flex-shrink-0">•</span>
+                                  <p className="text-gray-800 flex-1">{line}</p>
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        })()}
                         {step.duration && (
                           <p className="text-sm text-gray-500 mt-1">
                             Tempo: {step.duration} min
