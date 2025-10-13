@@ -135,7 +135,10 @@ export function StepsListCollapsible({ steps, defaultExpanded = false }: StepsLi
             )}
 
             {/* Reserve space for collapsed step numbers */}
-            {!isExpanded && group.steps.forEach(() => globalStepNumber++)}
+            {!isExpanded && (() => {
+              group.steps.forEach(() => globalStepNumber++);
+              return null;
+            })()}
           </div>
         );
       })}
