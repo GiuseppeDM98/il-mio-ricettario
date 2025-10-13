@@ -172,29 +172,44 @@ export function RecipeForm({ recipe, mode }: RecipeFormProps) {
             + Aggiungi
           </Button>
         </div>
-        <div className="space-y-2">
-          {ingredients.map((ing) => (
-            <div key={ing.id} className="flex gap-2">
-              <Input
-                placeholder="Nome ingrediente"
-                value={ing.name}
-                onChange={(e) => updateIngredient(ing.id, 'name', e.target.value)}
-                className="flex-1"
-              />
-              <Input
-                placeholder="Quantità"
-                value={ing.quantity}
-                onChange={(e) => updateIngredient(ing.id, 'quantity', e.target.value)}
-                className="w-32"
-              />
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                onClick={() => removeIngredient(ing.id)}
-              >
-                ✕
-              </Button>
+        <div className="space-y-3">
+          {ingredients.map((ing, idx) => (
+            <div key={ing.id} className="border rounded-lg p-3 space-y-2">
+              <div className="space-y-2">
+                <Input
+                  value={ing.section || ''}
+                  onChange={(e) => updateIngredient(ing.id, 'section', e.target.value)}
+                  placeholder="Titolo sezione (opzionale, es. Per la pasta, Per il sugo)"
+                  className="font-medium"
+                />
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Nome ingrediente"
+                    value={ing.name}
+                    onChange={(e) => updateIngredient(ing.id, 'name', e.target.value)}
+                    className="flex-1"
+                  />
+                  <Input
+                    placeholder="Quantità"
+                    value={ing.quantity}
+                    onChange={(e) => updateIngredient(ing.id, 'quantity', e.target.value)}
+                    className="w-32"
+                  />
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => removeIngredient(ing.id)}
+                  >
+                    ✕
+                  </Button>
+                </div>
+              </div>
+              {ing.section && (
+                <div className="text-xs text-gray-500 italic">
+                  Questo ingrediente sarà raggruppato nella sezione "{ing.section}"
+                </div>
+              )}
             </div>
           ))}
         </div>

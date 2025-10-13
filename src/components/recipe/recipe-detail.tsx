@@ -1,7 +1,7 @@
 'use client';
 
 import { Recipe } from '@/types';
-import { IngredientList } from './ingredient-list';
+import { IngredientListCollapsible } from './ingredient-list-collapsible';
 import { StepsListCollapsible } from './steps-list-collapsible';
 
 interface RecipeDetailProps {
@@ -36,7 +36,7 @@ export function RecipeDetail({ recipe }: RecipeDetailProps) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-1">
           <h2 className="text-2xl font-semibold mb-4">Ingredienti</h2>
-          <IngredientList ingredients={recipe.ingredients} />
+          <IngredientListCollapsible ingredients={recipe.ingredients} defaultExpanded={false} />
         </div>
         <div className="lg:col-span-2">
           <h2 className="text-2xl font-semibold mb-4">Preparazione</h2>

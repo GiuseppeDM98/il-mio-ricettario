@@ -124,3 +124,18 @@ export async function getCategorySubcategories(
     ...doc.data()
   })) as Subcategory[];
 }
+
+// Update subcategory
+export async function updateSubcategory(
+  subcategoryId: string,
+  updates: Partial<Subcategory>
+): Promise<void> {
+  const subcategoryRef = doc(db, 'subcategories', subcategoryId);
+  await updateDoc(subcategoryRef, updates);
+}
+
+// Delete subcategory
+export async function deleteSubcategory(subcategoryId: string): Promise<void> {
+  const subcategoryRef = doc(db, 'subcategories', subcategoryId);
+  await deleteDoc(subcategoryRef);
+}
