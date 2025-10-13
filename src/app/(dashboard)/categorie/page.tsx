@@ -7,10 +7,22 @@ import {
   createCategory,
   deleteCategory,
   updateCategory,
+  getCategorySubcategories,
+  createSubcategory,
 } from '@/lib/firebase/categories';
-import { Category } from '@/types';
+import { Category, Subcategory } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Card } from '@/components/ui/card';
+import { Spinner } from '@/components/ui/spinner';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 export default function GestioneCategoriePage() {
   const { user } = useAuth();
@@ -18,8 +30,13 @@ export default function GestioneCategoriePage() {
   const [loading, setLoading] = useState(true);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryIcon, setNewCategoryIcon] = useState('');
-  const [newCategoryColor, setNewCategoryColor] = useState('#000000');
+  const [newCategoryColor, setNewCategoryColor] = useState('#FF6B6B');
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [deletingCategory, setDeletingCategory] = useState<Category | null>(null);
+  const [expandedCategoryId, setExpandedCategoryId] = useState<string | null>(null);
+  const [subcategories, setSubcategories] = useState<Record<string, Subcategory[]>>({});
+  const [newSubcategoryName, setNewSubcategoryName] = useState('');
+  const [addingSubcategoryTo, setAddingSubcategoryTo] = useState<string | null>(null);
 
   const loadCategories = async () => {
     if (!user) return;
@@ -34,11 +51,26 @@ export default function GestioneCategoriePage() {
     }
   };
 
+  const loadSubcategories = async (categoryId: string) => {
+    try {
+      const subs = await getCategorySubcategories(categoryId);
+      setSubcategories(prev => ({ ...prev, [categoryId]: subs }));
+    } catch (error) {
+      console.error('Error loading subcategories:', error);
+    }
+  };
+
   useEffect(() => {
     if (user) {
       loadCategories();
     }
   }, [user]);
+
+  useEffect(() => {
+    if (expandedCategoryId && !subcategories[expandedCategoryId]) {
+      loadSubcategories(expandedCategoryId);
+    }
+  }, [expandedCategoryId]);
 
   const handleCreateCategory = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,14 +95,39 @@ export default function GestioneCategoriePage() {
     }
   };
 
-  const handleDeleteCategory = async (categoryId: string) => {
-    if (!confirm('Sei sicuro di voler eliminare questa categoria?')) return;
+  const handleDeleteCategory = async () => {
+    if (!deletingCategory) return;
     try {
-      await deleteCategory(categoryId);
-      await loadCategories(); // Refresh list
+      await deleteCategory(deletingCategory.id);
+      setDeletingCategory(null);
+      await loadCategories();
     } catch (error) {
       console.error('Error deleting category:', error);
     }
+  };
+
+  const handleAddSubcategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !addingSubcategoryTo || !newSubcategoryName) return;
+
+    try {
+      const currentSubs = subcategories[addingSubcategoryTo] || [];
+      await createSubcategory(
+        user.uid,
+        addingSubcategoryTo,
+        newSubcategoryName,
+        currentSubs.length + 1
+      );
+      setNewSubcategoryName('');
+      setAddingSubcategoryTo(null);
+      await loadSubcategories(addingSubcategoryTo);
+    } catch (error) {
+      console.error('Error creating subcategory:', error);
+    }
+  };
+
+  const toggleCategory = (categoryId: string) => {
+    setExpandedCategoryId(prev => prev === categoryId ? null : categoryId);
   };
 
   const handleUpdateCategory = async (e: React.FormEvent) => {
@@ -91,93 +148,239 @@ export default function GestioneCategoriePage() {
   };
 
   if (loading) {
-    return <div>Caricamento categorie...</div>;
+    return (
+      <div className="flex justify-center items-center h-full">
+        <Spinner size="lg" />
+      </div>
+    );
   }
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Gestione Categorie</h1>
-
-      {/* Edit Form */}
-      {editingCategory && (
-        <form onSubmit={handleUpdateCategory} className="mb-6 p-4 border rounded-lg bg-gray-50">
-          <h2 className="text-xl font-semibold mb-2">Modifica Categoria</h2>
-          <div className="flex flex-wrap gap-4">
-            <Input
-              type="text"
-              value={editingCategory.name}
-              onChange={(e) => setEditingCategory({ ...editingCategory, name: e.target.value })}
-              placeholder="Nome categoria"
-              required
-              className="flex-grow"
-            />
-            <Input
-              type="text"
-              value={editingCategory.icon || ''}
-              onChange={(e) => setEditingCategory({ ...editingCategory, icon: e.target.value })}
-              placeholder="Icona (es. 🍝)"
-              className="w-24"
-            />
-            <Input
-              type="color"
-              value={editingCategory.color || '#000000'}
-              onChange={(e) => setEditingCategory({ ...editingCategory, color: e.target.value })}
-              className="w-24"
-            />
-            <Button type="submit">Salva Modifiche</Button>
-            <Button type="button" variant="outline" onClick={() => setEditingCategory(null)}>Annulla</Button>
-          </div>
-        </form>
-      )}
+    <div className="container mx-auto">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">Categorie</h1>
+      </div>
 
       {/* Create Form */}
-      <form onSubmit={handleCreateCategory} className="mb-6 p-4 border rounded-lg">
-        <h2 className="text-xl font-semibold mb-2">Crea Nuova Categoria</h2>
-        <div className="flex flex-wrap gap-4">
-          <Input
-            type="text"
-            value={newCategoryName}
-            onChange={(e) => setNewCategoryName(e.target.value)}
-            placeholder="Nome nuova categoria"
-            required
-            className="flex-grow"
-          />
-          <Input
-            type="text"
-            value={newCategoryIcon}
-            onChange={(e) => setNewCategoryIcon(e.target.value)}
-            placeholder="Icona (es. 🍝)"
-            className="w-24"
-          />
-          <Input
-            type="color"
-            value={newCategoryColor}
-            onChange={(e) => setNewCategoryColor(e.target.value)}
-            className="w-24"
-          />
-          <Button type="submit">Crea</Button>
-        </div>
-      </form>
+      <Card className="mb-6 p-6">
+        <h2 className="text-xl font-semibold mb-4">Crea Nuova Categoria</h2>
+        <form onSubmit={handleCreateCategory}>
+          <div className="flex flex-wrap gap-4 items-end">
+            <div className="flex-grow min-w-[200px]">
+              <label className="block text-sm font-medium mb-2">Nome</label>
+              <Input
+                type="text"
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                placeholder="Es. Primi piatti"
+                required
+              />
+            </div>
+            <div className="w-32">
+              <label className="block text-sm font-medium mb-2">Icona</label>
+              <Input
+                type="text"
+                value={newCategoryIcon}
+                onChange={(e) => setNewCategoryIcon(e.target.value)}
+                placeholder="🍝"
+                className="text-center text-xl"
+              />
+            </div>
+            <div className="w-32">
+              <label className="block text-sm font-medium mb-2">Colore</label>
+              <Input
+                type="color"
+                value={newCategoryColor}
+                onChange={(e) => setNewCategoryColor(e.target.value)}
+                className="h-10 cursor-pointer"
+              />
+            </div>
+            <Button type="submit" size="lg">Crea Categoria</Button>
+          </div>
+        </form>
+      </Card>
 
       {/* Category List */}
-      <div className="space-y-2">
-        {categories.map((cat) => (
-          <div key={cat.id} className="flex items-center p-2 border rounded-md">
-            <span className="w-8 text-center" style={{ color: cat.color }}>
-              {cat.icon || '●'}
-            </span>
-            <span className="flex-grow font-medium">{cat.name}</span>
-            <div className="flex gap-2">
-              <Button size="sm" variant="outline" onClick={() => setEditingCategory(cat)}>Modifica</Button>
-              {!cat.isDefault && (
-                <Button size="sm" variant="destructive" onClick={() => handleDeleteCategory(cat.id)}>
-                  Elimina
+      {categories.length === 0 ? (
+        <Card className="p-12 text-center">
+          <p className="text-gray-500">Nessuna categoria trovata</p>
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {categories.map((cat) => (
+            <Card key={cat.id} className="overflow-hidden">
+              <div className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3 flex-grow">
+                    <span
+                      className="text-3xl w-12 h-12 flex items-center justify-center rounded-lg"
+                      style={{ backgroundColor: `${cat.color}20`, color: cat.color }}
+                    >
+                      {cat.icon || '●'}
+                    </span>
+                    <div className="flex-grow">
+                      <h3 className="font-semibold text-lg">{cat.name}</h3>
+                      <p className="text-sm text-gray-500">
+                        {cat.isDefault ? 'Categoria predefinita' : 'Categoria personalizzata'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => toggleCategory(cat.id)}
+                    >
+                      {expandedCategoryId === cat.id ? 'Chiudi' : 'Sottocategorie'}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setEditingCategory(cat)}
+                    >
+                      Modifica
+                    </Button>
+                    {!cat.isDefault && (
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => setDeletingCategory(cat)}
+                      >
+                        Elimina
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Subcategories Section */}
+                {expandedCategoryId === cat.id && (
+                  <div className="mt-4 pt-4 border-t">
+                    <div className="mb-3">
+                      <h4 className="font-medium mb-2">Sottocategorie</h4>
+                      {subcategories[cat.id]?.length > 0 ? (
+                        <div className="space-y-1">
+                          {subcategories[cat.id].map((sub) => (
+                            <div key={sub.id} className="flex items-center p-2 bg-gray-50 rounded">
+                              <span className="flex-grow">{sub.name}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-500">Nessuna sottocategoria</p>
+                      )}
+                    </div>
+                    {addingSubcategoryTo === cat.id ? (
+                      <form onSubmit={handleAddSubcategory} className="flex gap-2">
+                        <Input
+                          type="text"
+                          value={newSubcategoryName}
+                          onChange={(e) => setNewSubcategoryName(e.target.value)}
+                          placeholder="Nome sottocategoria"
+                          required
+                          className="flex-grow"
+                        />
+                        <Button type="submit" size="sm">Aggiungi</Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setAddingSubcategoryTo(null);
+                            setNewSubcategoryName('');
+                          }}
+                        >
+                          Annulla
+                        </Button>
+                      </form>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setAddingSubcategoryTo(cat.id)}
+                      >
+                        + Aggiungi Sottocategoria
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Edit Dialog */}
+      <Dialog open={!!editingCategory} onOpenChange={(open) => !open && setEditingCategory(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Modifica Categoria</DialogTitle>
+            <DialogDescription>
+              Modifica i dettagli della categoria
+            </DialogDescription>
+          </DialogHeader>
+          {editingCategory && (
+            <form onSubmit={handleUpdateCategory}>
+              <div className="space-y-4 py-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Nome</label>
+                  <Input
+                    type="text"
+                    value={editingCategory.name}
+                    onChange={(e) => setEditingCategory({ ...editingCategory, name: e.target.value })}
+                    placeholder="Nome categoria"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Icona</label>
+                  <Input
+                    type="text"
+                    value={editingCategory.icon || ''}
+                    onChange={(e) => setEditingCategory({ ...editingCategory, icon: e.target.value })}
+                    placeholder="🍝"
+                    className="text-center text-xl"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Colore</label>
+                  <Input
+                    type="color"
+                    value={editingCategory.color || '#000000'}
+                    onChange={(e) => setEditingCategory({ ...editingCategory, color: e.target.value })}
+                    className="h-10 cursor-pointer"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setEditingCategory(null)}>
+                  Annulla
                 </Button>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
+                <Button type="submit">Salva Modifiche</Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deletingCategory} onOpenChange={(open) => !open && setDeletingCategory(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Elimina Categoria</DialogTitle>
+            <DialogDescription>
+              Sei sicuro di voler eliminare la categoria "{deletingCategory?.name}"? Questa azione non può essere annullata.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeletingCategory(null)}>
+              Annulla
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteCategory}>
+              Elimina
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

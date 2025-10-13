@@ -27,6 +27,10 @@ interface AuthContextType {
 
 export const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 
+export function useAuth() {
+  return useContext(AuthContext);
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -77,7 +81,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await updateProfile(userCredential.user, { displayName });
 
     // User document created automatically by onAuthStateChanged
-    return userCredential;
   };
 
   const signIn = async (email: string, password: string) => {
@@ -104,7 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 }
