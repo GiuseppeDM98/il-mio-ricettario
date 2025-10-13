@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
+import { EmojiPicker } from '@/components/ui/emoji-picker';
 import {
   Dialog,
   DialogContent,
@@ -52,8 +53,9 @@ export default function GestioneCategoriePage() {
   };
 
   const loadSubcategories = async (categoryId: string) => {
+    if (!user) return;
     try {
-      const subs = await getCategorySubcategories(categoryId);
+      const subs = await getCategorySubcategories(categoryId, user.uid);
       setSubcategories(prev => ({ ...prev, [categoryId]: subs }));
     } catch (error) {
       console.error('Error loading subcategories:', error);
@@ -176,14 +178,12 @@ export default function GestioneCategoriePage() {
                 required
               />
             </div>
-            <div className="w-32">
+            <div>
               <label className="block text-sm font-medium mb-2">Icona</label>
-              <Input
-                type="text"
+              <EmojiPicker
                 value={newCategoryIcon}
-                onChange={(e) => setNewCategoryIcon(e.target.value)}
-                placeholder="🍝"
-                className="text-center text-xl"
+                onSelect={setNewCategoryIcon}
+                className="w-20 h-10"
               />
             </div>
             <div className="w-32">
@@ -333,12 +333,10 @@ export default function GestioneCategoriePage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-2">Icona</label>
-                  <Input
-                    type="text"
+                  <EmojiPicker
                     value={editingCategory.icon || ''}
-                    onChange={(e) => setEditingCategory({ ...editingCategory, icon: e.target.value })}
-                    placeholder="🍝"
-                    className="text-center text-xl"
+                    onSelect={(icon) => setEditingCategory({ ...editingCategory, icon })}
+                    className="w-20 h-10"
                   />
                 </div>
                 <div>

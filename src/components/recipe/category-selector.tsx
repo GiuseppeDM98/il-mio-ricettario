@@ -51,8 +51,9 @@ export function CategorySelector({
   };
 
   const loadSubcategories = async (categoryId: string) => {
+    if (!user) return;
     try {
-      const subs = await getCategorySubcategories(categoryId);
+      const subs = await getCategorySubcategories(categoryId, user.uid);
       setSubcategories(subs);
     } catch (error) {
       console.error('Error loading subcategories:', error);

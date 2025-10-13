@@ -107,12 +107,14 @@ export async function createSubcategory(
 }
 
 export async function getCategorySubcategories(
-  categoryId: string
+  categoryId: string,
+  userId: string
 ): Promise<Subcategory[]> {
   const subcategoriesRef = collection(db, 'subcategories');
   const q = query(
     subcategoriesRef,
     where('categoryId', '==', categoryId),
+    where('userId', '==', userId),
     orderBy('order', 'asc')
   );
 
