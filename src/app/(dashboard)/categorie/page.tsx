@@ -9,6 +9,8 @@ import {
   updateCategory,
   getCategorySubcategories,
   createSubcategory,
+  updateSubcategory,
+  deleteSubcategory,
 } from '@/lib/firebase/categories';
 import { Category, Subcategory } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -38,6 +40,8 @@ export default function GestioneCategoriePage() {
   const [subcategories, setSubcategories] = useState<Record<string, Subcategory[]>>({});
   const [newSubcategoryName, setNewSubcategoryName] = useState('');
   const [addingSubcategoryTo, setAddingSubcategoryTo] = useState<string | null>(null);
+  const [editingSubcategory, setEditingSubcategory] = useState<Subcategory | null>(null);
+  const [deletingSubcategory, setDeletingSubcategory] = useState<Subcategory | null>(null);
 
   const loadCategories = async () => {
     if (!user) return;
@@ -130,6 +134,34 @@ export default function GestioneCategoriePage() {
 
   const toggleCategory = (categoryId: string) => {
     setExpandedCategoryId(prev => prev === categoryId ? null : categoryId);
+  };
+
+  const handleUpdateSubcategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingSubcategory) return;
+
+    try {
+      await updateSubcategory(editingSubcategory.id, {
+        name: editingSubcategory.name,
+      });
+      setEditingSubcategory(null);
+      await loadSubcategories(editingSubcategory.categoryId);
+    } catch (error) {
+      console.error('Error updating subcategory:', error);
+    }
+  };
+
+  const handleDeleteSubcategory = async () => {
+    if (!deletingSubcategory) return;
+
+    try {
+      await deleteSubcategory(deletingSubcategory.id);
+      const categoryId = deletingSubcategory.categoryId;
+      setDeletingSubcategory(null);
+      await loadSubcategories(categoryId);
+    } catch (error) {
+      console.error('Error deleting subcategory:', error);
+    }
   };
 
   const handleUpdateCategory = async (e: React.FormEvent) => {
@@ -260,8 +292,24 @@ export default function GestioneCategoriePage() {
                       {subcategories[cat.id]?.length > 0 ? (
                         <div className="space-y-1">
                           {subcategories[cat.id].map((sub) => (
-                            <div key={sub.id} className="flex items-center p-2 bg-gray-50 rounded">
+                            <div key={sub.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
                               <span className="flex-grow">{sub.name}</span>
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => setEditingSubcategory(sub)}
+                                >
+                                  Modifica
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() => setDeletingSubcategory(sub)}
+                                >
+                                  Elimina
+                                </Button>
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -374,6 +422,60 @@ export default function GestioneCategoriePage() {
               Annulla
             </Button>
             <Button variant="destructive" onClick={handleDeleteCategory}>
+              Elimina
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Subcategory Dialog */}
+      <Dialog open={!!editingSubcategory} onOpenChange={(open) => !open && setEditingSubcategory(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Modifica Sottocategoria</DialogTitle>
+            <DialogDescription>
+              Modifica il nome della sottocategoria
+            </DialogDescription>
+          </DialogHeader>
+          {editingSubcategory && (
+            <form onSubmit={handleUpdateSubcategory}>
+              <div className="space-y-4 py-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Nome</label>
+                  <Input
+                    type="text"
+                    value={editingSubcategory.name}
+                    onChange={(e) => setEditingSubcategory({ ...editingSubcategory, name: e.target.value })}
+                    placeholder="Nome sottocategoria"
+                    required
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setEditingSubcategory(null)}>
+                  Annulla
+                </Button>
+                <Button type="submit">Salva Modifiche</Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Subcategory Confirmation Dialog */}
+      <Dialog open={!!deletingSubcategory} onOpenChange={(open) => !open && setDeletingSubcategory(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Elimina Sottocategoria</DialogTitle>
+            <DialogDescription>
+              Sei sicuro di voler eliminare la sottocategoria "{deletingSubcategory?.name}"? Questa azione non può essere annullata.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeletingSubcategory(null)}>
+              Annulla
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteSubcategory}>
               Elimina
             </Button>
           </DialogFooter>

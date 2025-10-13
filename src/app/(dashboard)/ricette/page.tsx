@@ -1,13 +1,43 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useRecipes } from '@/lib/hooks/useRecipes';
 import { RecipeCard } from '@/components/recipe/recipe-card';
 import { Spinner } from '@/components/ui/spinner';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/lib/context/auth-context';
+import { getUserCategories, getCategorySubcategories } from '@/lib/firebase/categories';
+import { Category, Subcategory } from '@/types';
 import Link from 'next/link';
 
 export default function RecipesPage() {
   const { recipes, loading, error } = useRecipes();
+  const { user } = useAuth();
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
+
+  useEffect(() => {
+    const loadCategoriesData = async () => {
+      if (!user) return;
+
+      try {
+        const userCategories = await getUserCategories(user.uid);
+        setCategories(userCategories);
+
+        // Load all subcategories for all categories
+        const allSubcategories: Subcategory[] = [];
+        for (const category of userCategories) {
+          const subs = await getCategorySubcategories(category.id, user.uid);
+          allSubcategories.push(...subs);
+        }
+        setSubcategories(allSubcategories);
+      } catch (error) {
+        console.error('Error loading categories:', error);
+      }
+    };
+
+    loadCategoriesData();
+  }, [user]);
 
   if (loading) {
     return (
@@ -41,7 +71,12 @@ export default function RecipesPage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {recipes.map((recipe) => (
-            <RecipeCard key={recipe.id} recipe={recipe} />
+            <RecipeCard
+              key={recipe.id}
+              recipe={recipe}
+              categories={categories}
+              subcategories={subcategories}
+            />
           ))}
         </div>
       )}

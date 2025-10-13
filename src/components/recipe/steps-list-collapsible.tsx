@@ -107,9 +107,6 @@ export function StepsListCollapsible({ steps, defaultExpanded = false }: StepsLi
                 <h3 className="font-semibold text-lg text-gray-900">
                   {group.section}
                 </h3>
-                <span className="text-sm text-gray-500">
-                  ({group.steps.length} {group.steps.length === 1 ? 'step' : 'step'})
-                </span>
               </div>
             </button>
 

@@ -7,7 +7,7 @@ import { getRecipe } from '@/lib/firebase/firestore';
 import { Recipe } from '@/types';
 import { Spinner } from '@/components/ui/spinner';
 import { StepsListCollapsible } from '@/components/recipe/steps-list-collapsible';
-import { IngredientList } from '@/components/recipe/ingredient-list';
+import { IngredientListCollapsible } from '@/components/recipe/ingredient-list-collapsible';
 import NoSleep from 'nosleep.js';
 
 export default function CookingModePage() {
@@ -67,7 +67,7 @@ export default function CookingModePage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div>
           <h2 className="text-3xl font-semibold mb-4">Ingredienti</h2>
-          <IngredientList ingredients={recipe.ingredients} />
+          <IngredientListCollapsible ingredients={recipe.ingredients} defaultExpanded={true} />
         </div>
         <div>
           <h2 className="text-3xl font-semibold mb-4">Preparazione</h2>
