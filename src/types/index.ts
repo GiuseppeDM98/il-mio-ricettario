@@ -17,10 +17,11 @@ export interface Ingredient {
 }
 
 export interface Step {
-  id:string;
+  id: string;
   order: number;
   description: string;
   duration?: number;
+  section?: string;
 }
 
 export interface Recipe {

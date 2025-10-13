@@ -45,12 +45,12 @@ export function RecipeForm({ recipe, mode }: RecipeFormProps) {
   };
 
   const addStep = () => {
-    setSteps([...steps, { id: uuidv4(), order: steps.length + 1, description: '' }]);
+    setSteps([...steps, { id: uuidv4(), order: steps.length + 1, description: '', section: '' }]);
   };
 
-  const updateStep = (id: string, description: string) => {
+  const updateStep = (id: string, field: keyof Step, value: string | number) => {
     setSteps(steps.map(step =>
-      step.id === id ? { ...step, description } : step
+      step.id === id ? { ...step, [field]: value } : step
     ));
   };
 
@@ -208,27 +208,43 @@ export function RecipeForm({ recipe, mode }: RecipeFormProps) {
             + Aggiungi Step
           </Button>
         </div>
-        <div className="space-y-2">
+        <div className="space-y-3">
           {steps.map((step, idx) => (
-            <div key={step.id} className="flex gap-2">
-              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-200 text-sm font-medium">
-                {idx + 1}
-              </span>
-              <textarea
-                className="flex-1 border rounded-md p-2"
-                value={step.description}
-                onChange={(e) => updateStep(step.id, e.target.value)}
-                rows={2}
-                placeholder="Descrivi questo passaggio..."
-              />
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                onClick={() => removeStep(step.id)}
-              >
-                ✕
-              </Button>
+            <div key={step.id} className="border rounded-lg p-3 space-y-2">
+              <div className="flex items-start gap-2">
+                <span className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground text-sm font-bold flex-shrink-0">
+                  {idx + 1}
+                </span>
+                <div className="flex-1 space-y-2">
+                  <Input
+                    value={step.section || ''}
+                    onChange={(e) => updateStep(step.id, 'section', e.target.value)}
+                    placeholder="Titolo sezione (opzionale, es. Preparazione della pasta)"
+                    className="font-medium"
+                  />
+                  <textarea
+                    className="w-full border rounded-md p-2"
+                    value={step.description}
+                    onChange={(e) => updateStep(step.id, 'description', e.target.value)}
+                    rows={3}
+                    placeholder="Descrivi questo passaggio..."
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => removeStep(step.id)}
+                  className="flex-shrink-0"
+                >
+                  ✕
+                </Button>
+              </div>
+              {step.section && (
+                <div className="ml-10 text-xs text-gray-500 italic">
+                  Questo step sarà raggruppato nella sezione "{step.section}"
+                </div>
+              )}
             </div>
           ))}
         </div>

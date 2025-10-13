@@ -6,7 +6,7 @@ import { useAuth } from '@/lib/hooks/useAuth';
 import { getRecipe } from '@/lib/firebase/firestore';
 import { Recipe } from '@/types';
 import { Spinner } from '@/components/ui/spinner';
-import { StepsList } from '@/components/recipe/steps-list';
+import { StepsListCollapsible } from '@/components/recipe/steps-list-collapsible';
 import { IngredientList } from '@/components/recipe/ingredient-list';
 import NoSleep from 'nosleep.js';
 
@@ -71,7 +71,7 @@ export default function CookingModePage() {
         </div>
         <div>
           <h2 className="text-3xl font-semibold mb-4">Preparazione</h2>
-          <StepsList steps={recipe.steps} />
+          <StepsListCollapsible steps={recipe.steps} defaultExpanded={true} />
         </div>
       </div>
     </div>
