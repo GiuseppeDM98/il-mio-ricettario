@@ -13,14 +13,14 @@ export interface Ingredient {
   id: string;
   name: string;
   quantity: string;
-  section?: string; // es. "Per la pasta", "Per il sugo"
+  section?: string;
 }
 
 export interface Step {
-  id: string;
+  id:string;
   order: number;
   description: string;
-  duration?: number; // in minuti
+  duration?: number;
 }
 
 export interface Recipe {
@@ -28,17 +28,57 @@ export interface Recipe {
   userId: string;
   title: string;
   description?: string;
-  category?: string;        // Will be customizable in Phase 2
-  subcategory?: string;     // Will be customizable in Phase 2
-  servings?: number;
-  prepTime?: number;        // minuti
-  cookTime?: number;        // minuti
-  totalTime?: number;       // minuti (auto-calculated)
+  categoryId?: string;
+  subcategoryId?: string;
   difficulty?: 'facile' | 'media' | 'difficile';
+  tags: string[];
+  techniqueIds: string[];
+  source?: {
+    type: 'manual' | 'url' | 'pdf';
+    url?: string;
+    name?: string;
+  };
   ingredients: Ingredient[];
   steps: Step[];
+  images: string[];
+  servings?: number;
+  prepTime?: number;
+  cookTime?: number;
+  totalTime?: number;
   notes?: string;
-  tags?: string[];
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export interface Category {
+  id: string;
+  userId: string;
+  name: string;
+  icon?: string;
+  color?: string;
+  order: number;
+  isDefault: boolean;
+  createdAt: Timestamp;
+}
+
+export interface Subcategory {
+  id: string;
+  categoryId: string;
+  userId: string;
+  name: string;
+  order: number;
+  createdAt: Timestamp;
+}
+
+export interface Technique {
+  id: string;
+  userId: string;
+  title: string;
+  description: string;
+  content: string;
+  type?: 'cottura' | 'preparazione' | 'conservazione' | 'altro';
+  tags: string[];
+  relatedRecipeIds: string[];
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
