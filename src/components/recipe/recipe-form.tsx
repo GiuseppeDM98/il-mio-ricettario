@@ -8,6 +8,7 @@ import { createRecipe, updateRecipe } from '@/lib/firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { v4 as uuidv4 } from 'uuid';
+import { CategorySelector } from './category-selector';
 
 interface RecipeFormProps {
   recipe?: Recipe; // For edit mode
@@ -25,6 +26,8 @@ export function RecipeForm({ recipe, mode }: RecipeFormProps) {
   const [cookTime, setCookTime] = useState(recipe?.cookTime || 0);
   const [ingredients, setIngredients] = useState<Ingredient[]>(recipe?.ingredients || []);
   const [steps, setSteps] = useState<Step[]>(recipe?.steps || []);
+  const [categoryId, setCategoryId] = useState(recipe?.categoryId || '');
+  const [subcategoryId, setSubcategoryId] = useState(recipe?.subcategoryId || '');
   const [loading, setLoading] = useState(false);
 
   const addIngredient = () => {
@@ -67,17 +70,23 @@ export function RecipeForm({ recipe, mode }: RecipeFormProps) {
     try {
       let recipeId = recipe?.id;
 
-      const recipeData = {
+      const recipeData: Omit<Recipe, 'id' | 'userId' | 'createdAt' | 'updatedAt'> = {
         title,
-        description,
-        servings,
-        prepTime,
-        cookTime,
-        totalTime: prepTime + cookTime,
+        description: description || '',
+        servings: servings || 0,
+        prepTime: prepTime || 0,
+        cookTime: cookTime || 0,
+        totalTime: (prepTime || 0) + (cookTime || 0),
         ingredients,
         steps,
-        notes: '',
-        tags: [],
+        categoryId: categoryId || '',
+        subcategoryId: subcategoryId || '',
+        difficulty: recipe?.difficulty || 'facile',
+        tags: recipe?.tags || [],
+        techniqueIds: recipe?.techniqueIds || [],
+        source: recipe?.source || { type: 'manual' },
+        notes: recipe?.notes || '',
+        images: recipe?.images || [],
       };
 
       if (mode === 'create') {
@@ -117,6 +126,13 @@ export function RecipeForm({ recipe, mode }: RecipeFormProps) {
           placeholder="Breve descrizione della ricetta..."
         />
       </div>
+
+      <CategorySelector
+        selectedCategoryId={categoryId}
+        selectedSubcategoryId={subcategoryId}
+        onCategoryChange={setCategoryId}
+        onSubcategoryChange={setSubcategoryId}
+      />
 
       <div className="grid grid-cols-3 gap-4">
         <div>

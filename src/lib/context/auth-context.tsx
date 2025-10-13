@@ -14,6 +14,7 @@ import {
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/config';
 import { User } from '@/types';
+import { initializeDefaultCategories } from '../firebase/categories';
 
 interface AuthContextType {
   user: User | null;
@@ -50,9 +51,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           };
           await setDoc(userRef, newUserDoc);
 
+
+
+          // Initialize default categories for the new user
+          await initializeDefaultCategories(firebaseUser.uid);
+
+
           // Read the newly created doc to get the user object with timestamps
           const newUserSnap = await getDoc(userRef);
-          if(newUserSnap.exists()) {
+          if (newUserSnap.exists()) {
             setUser(newUserSnap.data() as User);
           }
         }
