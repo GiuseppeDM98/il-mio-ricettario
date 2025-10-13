@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Recipe, Ingredient, Step } from '@/types';
 import { useAuth } from '@/lib/hooks/useAuth';
@@ -15,6 +15,12 @@ interface RecipeFormProps {
   mode: 'create' | 'edit';
 }
 
+interface IngredientSection {
+  id: string;
+  name: string | null; // null = "Senza sezione"
+  ingredients: Ingredient[];
+}
+
 export function RecipeForm({ recipe, mode }: RecipeFormProps) {
   const router = useRouter();
   const { user } = useAuth();
@@ -24,25 +30,123 @@ export function RecipeForm({ recipe, mode }: RecipeFormProps) {
   const [servings, setServings] = useState(recipe?.servings || 4);
   const [prepTime, setPrepTime] = useState(recipe?.prepTime || 0);
   const [cookTime, setCookTime] = useState(recipe?.cookTime || 0);
-  const [ingredients, setIngredients] = useState<Ingredient[]>(recipe?.ingredients || []);
+  const [ingredientSections, setIngredientSections] = useState<IngredientSection[]>([]);
   const [steps, setSteps] = useState<Step[]>(recipe?.steps || []);
   const [categoryId, setCategoryId] = useState(recipe?.categoryId || '');
   const [subcategoryId, setSubcategoryId] = useState(recipe?.subcategoryId || '');
   const [loading, setLoading] = useState(false);
 
-  const addIngredient = () => {
-    setIngredients([...ingredients, { id: uuidv4(), name: '', quantity: '', section: '' }]);
+  // Gestione sezioni ingredienti
+  const addSection = () => {
+    const newSection: IngredientSection = {
+      id: uuidv4(),
+      name: '',
+      ingredients: []
+    };
+    setIngredientSections([...ingredientSections, newSection]);
   };
 
-  const updateIngredient = (id: string, field: keyof Ingredient, value: string) => {
-    setIngredients(ingredients.map(ing =>
-      ing.id === id ? { ...ing, [field]: value } : ing
-    ));
+  const updateSectionName = (sectionId: string, newName: string) => {
+    setIngredientSections(sections =>
+      sections.map(s => s.id === sectionId ? { ...s, name: newName } : s)
+    );
   };
 
-  const removeIngredient = (id: string) => {
-    setIngredients(ingredients.filter(ing => ing.id !== id));
+  const removeSection = (sectionId: string) => {
+    setIngredientSections(sections => sections.filter(s => s.id !== sectionId));
   };
+
+  // Gestione ingredienti nelle sezioni
+  const addIngredientToSection = (sectionId: string) => {
+    const newIngredient: Ingredient = {
+      id: uuidv4(),
+      name: '',
+      quantity: '',
+      section: ''
+    };
+
+    setIngredientSections(sections =>
+      sections.map(s =>
+        s.id === sectionId
+          ? { ...s, ingredients: [...s.ingredients, newIngredient] }
+          : s
+      )
+    );
+  };
+
+  const updateIngredientInSection = (
+    sectionId: string,
+    ingredientId: string,
+    field: keyof Ingredient,
+    value: string
+  ) => {
+    setIngredientSections(sections =>
+      sections.map(s =>
+        s.id === sectionId
+          ? {
+              ...s,
+              ingredients: s.ingredients.map(ing =>
+                ing.id === ingredientId ? { ...ing, [field]: value } : ing
+              )
+            }
+          : s
+      )
+    );
+  };
+
+  const removeIngredientFromSection = (sectionId: string, ingredientId: string) => {
+    setIngredientSections(sections =>
+      sections.map(s =>
+        s.id === sectionId
+          ? { ...s, ingredients: s.ingredients.filter(ing => ing.id !== ingredientId) }
+          : s
+      )
+    );
+  };
+
+  // Inizializzazione: converti array piatto → struttura gerarchica
+  useEffect(() => {
+    if (recipe?.ingredients && recipe.ingredients.length > 0) {
+      // Raggruppa ingredienti per sezione
+      const sectionsMap = new Map<string | null, Ingredient[]>();
+
+      recipe.ingredients.forEach(ing => {
+        const sectionKey = ing.section || null;
+        if (!sectionsMap.has(sectionKey)) {
+          sectionsMap.set(sectionKey, []);
+        }
+        sectionsMap.get(sectionKey)!.push(ing);
+      });
+
+      // Converti in array di IngredientSection
+      const sections: IngredientSection[] = [];
+      sectionsMap.forEach((ings, sectionName) => {
+        sections.push({
+          id: uuidv4(),
+          name: sectionName === null ? 'Ingredienti' : sectionName,
+          ingredients: ings
+        });
+      });
+
+      // Ordina: sezione "Ingredienti" (ex null) sempre per prima
+      sections.sort((a, b) => {
+        if (a.name === 'Ingredienti') return -1;
+        if (b.name === 'Ingredienti') return 1;
+        if (a.name === null) return -1; // Manteniamo il sort per dati vecchi
+        if (b.name === null) return 1;
+        return 0;
+      });
+
+      setIngredientSections(sections);
+    } else {
+      // Ricetta nuova: inizializza con sezione "Ingredienti"
+      setIngredientSections([{
+        id: uuidv4(),
+        name: 'Ingredienti',
+        ingredients: []
+      }]);
+    }
+  }, [recipe]);
 
   const addStep = () => {
     setSteps([...steps, { id: uuidv4(), order: steps.length + 1, description: '', section: '' }]);
@@ -70,6 +174,21 @@ export function RecipeForm({ recipe, mode }: RecipeFormProps) {
     try {
       let recipeId = recipe?.id;
 
+      // Converti struttura gerarchica → array piatto di ingredienti
+      const flatIngredients: Ingredient[] = [];
+
+      ingredientSections.forEach(section => {
+        section.ingredients.forEach(ing => {
+          const newIngredient: any = { ...ing };
+          if (section.name && section.name.trim()) {
+            newIngredient.section = section.name;
+          } else {
+            delete newIngredient.section;
+          }
+          flatIngredients.push(newIngredient);
+        });
+      });
+
       const recipeData: Omit<Recipe, 'id' | 'userId' | 'createdAt' | 'updatedAt'> = {
         title,
         description: description || '',
@@ -77,7 +196,7 @@ export function RecipeForm({ recipe, mode }: RecipeFormProps) {
         prepTime: prepTime || 0,
         cookTime: cookTime || 0,
         totalTime: (prepTime || 0) + (cookTime || 0),
-        ingredients,
+        ingredients: flatIngredients,
         steps,
         categoryId: categoryId || '',
         subcategoryId: subcategoryId || '',
@@ -166,50 +285,78 @@ export function RecipeForm({ recipe, mode }: RecipeFormProps) {
 
       {/* Ingredients Section */}
       <div>
-        <div className="flex justify-between items-center mb-2">
+        <div className="flex justify-between items-center mb-4">
           <label className="block text-sm font-medium">Ingredienti</label>
-          <Button type="button" onClick={addIngredient} size="sm">
-            + Aggiungi
+          <Button type="button" onClick={addSection} size="sm" variant="outline">
+            + Aggiungi Sezione
           </Button>
         </div>
-        <div className="space-y-3">
-          {ingredients.map((ing, idx) => (
-            <div key={ing.id} className="border rounded-lg p-3 space-y-2">
-              <div className="space-y-2">
-                <Input
-                  value={ing.section || ''}
-                  onChange={(e) => updateIngredient(ing.id, 'section', e.target.value)}
-                  placeholder="Titolo sezione (opzionale, es. Per la pasta, Per il sugo)"
-                  className="font-medium"
-                />
-                <div className="flex gap-2">
+
+        <div className="space-y-4">
+          {ingredientSections.map((section) => (
+            <div key={section.id} className="border rounded-lg p-4 bg-gray-50">
+              {/* Header Sezione */}
+              <div className="flex items-center gap-2 mb-3">
+                <>
+                  <span className="text-xl">📦</span>
                   <Input
-                    placeholder="Nome ingrediente"
-                    value={ing.name}
-                    onChange={(e) => updateIngredient(ing.id, 'name', e.target.value)}
-                    className="flex-1"
-                  />
-                  <Input
-                    placeholder="Quantità"
-                    value={ing.quantity}
-                    onChange={(e) => updateIngredient(ing.id, 'quantity', e.target.value)}
-                    className="w-32"
+                    value={section.name || ''}
+                    onChange={(e) => updateSectionName(section.id, e.target.value)}
+                    placeholder="Nome sezione (es. Per la pasta)"
+                    className="flex-1 font-semibold bg-white"
                   />
                   <Button
                     type="button"
                     variant="destructive"
                     size="sm"
-                    onClick={() => removeIngredient(ing.id)}
+                    onClick={() => removeSection(section.id)}
+                    title="Elimina sezione e tutti i suoi ingredienti"
                   >
                     ✕
                   </Button>
-                </div>
+                </>
               </div>
-              {ing.section && (
-                <div className="text-xs text-gray-500 italic">
-                  Questo ingrediente sarà raggruppato nella sezione "{ing.section}"
-                </div>
-              )}
+
+              {/* Lista Ingredienti della sezione */}
+              <div className="space-y-2 ml-6">
+                {section.ingredients.map((ing) => (
+                  <div key={ing.id} className="flex gap-2 items-center bg-white p-2 rounded border">
+                    <span className="text-gray-400">•</span>
+                    <Input
+                      placeholder="Nome ingrediente"
+                      value={ing.name}
+                      onChange={(e) => updateIngredientInSection(section.id, ing.id, 'name', e.target.value)}
+                      className="flex-1"
+                    />
+                    <Input
+                      placeholder="Quantità"
+                      value={ing.quantity}
+                      onChange={(e) => updateIngredientInSection(section.id, ing.id, 'quantity', e.target.value)}
+                      className="w-32"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeIngredientFromSection(section.id, ing.id)}
+                      title="Rimuovi ingrediente"
+                    >
+                      ✕
+                    </Button>
+                  </div>
+                ))}
+
+                {/* Bottone aggiungi ingrediente */}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => addIngredientToSection(section.id)}
+                  className="mt-2 text-primary w-full"
+                >
+                  + Aggiungi ingrediente
+                </Button>
+              </div>
             </div>
           ))}
         </div>
