@@ -123,24 +123,26 @@ export function RecipeForm({ recipe, mode }: RecipeFormProps) {
       sectionsMap.forEach((ings, sectionName) => {
         sections.push({
           id: uuidv4(),
-          name: sectionName,
+          name: sectionName === null ? 'Ingredienti' : sectionName,
           ingredients: ings
         });
       });
 
-      // Ordina: sezione null (senza sezione) sempre per ultima
+      // Ordina: sezione "Ingredienti" (ex null) sempre per prima
       sections.sort((a, b) => {
-        if (a.name === null) return 1;
-        if (b.name === null) return -1;
+        if (a.name === 'Ingredienti') return -1;
+        if (b.name === 'Ingredienti') return 1;
+        if (a.name === null) return -1; // Manteniamo il sort per dati vecchi
+        if (b.name === null) return 1;
         return 0;
       });
 
       setIngredientSections(sections);
     } else {
-      // Ricetta nuova: inizializza con sezione "Senza sezione"
+      // Ricetta nuova: inizializza con sezione "Ingredienti"
       setIngredientSections([{
         id: uuidv4(),
-        name: null,
+        name: 'Ingredienti',
         ingredients: []
       }]);
     }
@@ -177,10 +179,13 @@ export function RecipeForm({ recipe, mode }: RecipeFormProps) {
 
       ingredientSections.forEach(section => {
         section.ingredients.forEach(ing => {
-          flatIngredients.push({
-            ...ing,
-            section: section.name || undefined // null diventa undefined
-          });
+          const newIngredient: any = { ...ing };
+          if (section.name && section.name.trim()) {
+            newIngredient.section = section.name;
+          } else {
+            delete newIngredient.section;
+          }
+          flatIngredients.push(newIngredient);
         });
       });
 
@@ -292,31 +297,24 @@ export function RecipeForm({ recipe, mode }: RecipeFormProps) {
             <div key={section.id} className="border rounded-lg p-4 bg-gray-50">
               {/* Header Sezione */}
               <div className="flex items-center gap-2 mb-3">
-                {section.name === null ? (
-                  <h3 className="font-semibold text-gray-700 flex items-center gap-2">
-                    <span className="text-xl">📦</span>
-                    Senza sezione
-                  </h3>
-                ) : (
-                  <>
-                    <span className="text-xl">📦</span>
-                    <Input
-                      value={section.name}
-                      onChange={(e) => updateSectionName(section.id, e.target.value)}
-                      placeholder="Nome sezione (es. Per la pasta)"
-                      className="flex-1 font-semibold bg-white"
-                    />
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => removeSection(section.id)}
-                      title="Elimina sezione e tutti i suoi ingredienti"
-                    >
-                      ✕
-                    </Button>
-                  </>
-                )}
+                <>
+                  <span className="text-xl">📦</span>
+                  <Input
+                    value={section.name || ''}
+                    onChange={(e) => updateSectionName(section.id, e.target.value)}
+                    placeholder="Nome sezione (es. Per la pasta)"
+                    className="flex-1 font-semibold bg-white"
+                  />
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => removeSection(section.id)}
+                    title="Elimina sezione e tutti i suoi ingredienti"
+                  >
+                    ✕
+                  </Button>
+                </>
               </div>
 
               {/* Lista Ingredienti della sezione */}
