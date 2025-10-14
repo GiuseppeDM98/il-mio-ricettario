@@ -80,10 +80,36 @@ export async function updateCategory(
   await updateDoc(categoryRef, updates);
 }
 
-// Delete category
-export async function deleteCategory(categoryId: string): Promise<void> {
+// Delete category and all its subcategories
+export async function deleteCategory(categoryId: string, userId: string): Promise<void> {
+  // First, delete all subcategories
+  const subcategoriesRef = collection(db, 'subcategories');
+  const q = query(
+    subcategoriesRef,
+    where('categoryId', '==', categoryId),
+    where('userId', '==', userId)
+  );
+
+  const subcategoriesSnapshot = await getDocs(q);
+  const deletePromises = subcategoriesSnapshot.docs.map(doc => deleteDoc(doc.ref));
+  await Promise.all(deletePromises);
+
+  // Then delete the category itself
   const categoryRef = doc(db, 'categories', categoryId);
   await deleteDoc(categoryRef);
+}
+
+// Count subcategories for a category
+export async function countSubcategories(categoryId: string, userId: string): Promise<number> {
+  const subcategoriesRef = collection(db, 'subcategories');
+  const q = query(
+    subcategoriesRef,
+    where('categoryId', '==', categoryId),
+    where('userId', '==', userId)
+  );
+
+  const snapshot = await getDocs(q);
+  return snapshot.size;
 }
 
 // Subcategories

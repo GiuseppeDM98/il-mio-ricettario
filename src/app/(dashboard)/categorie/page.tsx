@@ -11,6 +11,7 @@ import {
   createSubcategory,
   updateSubcategory,
   deleteSubcategory,
+  countSubcategories,
 } from '@/lib/firebase/categories';
 import { Category, Subcategory } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -42,6 +43,7 @@ export default function GestioneCategoriePage() {
   const [addingSubcategoryTo, setAddingSubcategoryTo] = useState<string | null>(null);
   const [editingSubcategory, setEditingSubcategory] = useState<Subcategory | null>(null);
   const [deletingSubcategory, setDeletingSubcategory] = useState<Subcategory | null>(null);
+  const [subcategoryCount, setSubcategoryCount] = useState<number>(0);
 
   const loadCategories = async () => {
     if (!user) return;
@@ -101,11 +103,20 @@ export default function GestioneCategoriePage() {
     }
   };
 
+  const handleOpenDeleteDialog = async (category: Category) => {
+    if (!user) return;
+    setDeletingCategory(category);
+    // Count subcategories
+    const count = await countSubcategories(category.id, user.uid);
+    setSubcategoryCount(count);
+  };
+
   const handleDeleteCategory = async () => {
-    if (!deletingCategory) return;
+    if (!deletingCategory || !user) return;
     try {
-      await deleteCategory(deletingCategory.id);
+      await deleteCategory(deletingCategory.id, user.uid);
       setDeletingCategory(null);
+      setSubcategoryCount(0);
       await loadCategories();
     } catch (error) {
       console.error('Error deleting category:', error);
@@ -276,7 +287,7 @@ export default function GestioneCategoriePage() {
                       <Button
                         size="sm"
                         variant="destructive"
-                        onClick={() => setDeletingCategory(cat)}
+                        onClick={() => handleOpenDeleteDialog(cat)}
                       >
                         Elimina
                       </Button>
@@ -409,16 +420,30 @@ export default function GestioneCategoriePage() {
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={!!deletingCategory} onOpenChange={(open) => !open && setDeletingCategory(null)}>
+      <Dialog open={!!deletingCategory} onOpenChange={(open) => {
+        if (!open) {
+          setDeletingCategory(null);
+          setSubcategoryCount(0);
+        }
+      }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Elimina Categoria</DialogTitle>
             <DialogDescription>
-              Sei sicuro di voler eliminare la categoria "{deletingCategory?.name}"? Questa azione non può essere annullata.
+              Sei sicuro di voler eliminare la categoria "{deletingCategory?.name}"?
+              {subcategoryCount > 0 && (
+                <span className="block mt-2 font-semibold text-red-600">
+                  Attenzione: verranno eliminate anche {subcategoryCount} sotto-categori{subcategoryCount === 1 ? 'a' : 'e'} associate.
+                </span>
+              )}
+              <span className="block mt-2">Questa azione non può essere annullata.</span>
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeletingCategory(null)}>
+            <Button variant="outline" onClick={() => {
+              setDeletingCategory(null);
+              setSubcategoryCount(0);
+            }}>
               Annulla
             </Button>
             <Button variant="destructive" onClick={handleDeleteCategory}>

@@ -83,3 +83,13 @@ export interface Technique {
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
+
+export interface CookingSession {
+  id: string;
+  recipeId: string;
+  userId: string;
+  checkedIngredients: string[];
+  checkedSteps: string[];
+  startedAt: Timestamp;
+  lastUpdatedAt: Timestamp;
+}

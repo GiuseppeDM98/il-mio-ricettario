@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils/cn';
 const navItems = [
   { href: '/ricette', label: 'Le mie ricette' },
   { href: '/categorie', label: 'Categorie' },
+  { href: '/cotture-in-corso', label: 'Cotture in corso' },
   { href: '/ricette/new', label: 'Nuova ricetta' },
 ];
 
