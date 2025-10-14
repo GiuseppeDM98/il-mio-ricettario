@@ -1,0 +1,205 @@
+import { NextRequest, NextResponse } from 'next/server';
+import Anthropic from '@anthropic-ai/sdk';
+
+const EXTRACTION_PROMPT = `Analizza il PDF allegato ed estrai **TUTTE le ricette presenti** nel documento.
+
+**Fornisci il risultato completo formattando ogni ricetta secondo questa struttura:
+
+---
+
+# [Nome della ricetta 1]
+
+## Ingredienti per [nome sezione 1]
+[Elenco ingredienti con quantità esatte]
+
+## Ingredienti per [nome sezione 2]
+[Elenco ingredienti con quantità esatte]
+
+*(Ripeti per tutte le sezioni di ingredienti presenti)*
+
+---
+
+## Procedimento per [nome sezione 1]
+[Elenco puntato dettagliato dei passaggi]
+
+## Procedimento per [nome sezione 2]
+[Elenco puntato dettagliato dei passaggi]
+
+*(Ripeti per tutte le sezioni di procedimento presenti)*
+
+---
+
+**Note aggiuntive:** [eventuali note bene, suggerimenti, varianti o consigli]
+
+**Porzioni:** [numero]
+**Tempo di preparazione:** [tempo]
+**Tempo di cottura/lievitazione:** [tempo]
+
+---
+---
+
+# [Nome della ricetta 2]
+
+[Stessa struttura della ricetta 1]
+
+---
+---
+
+# [Nome della ricetta N]
+
+[Stessa struttura per tutte le ricette successive]
+
+---
+
+## ISTRUZIONI SPECIFICHE:
+
+### 1. IDENTIFICAZIONE RICETTE - MOLTO IMPORTANTE
+- Il documento potrebbe contenere un INDICE all'inizio. L'indice NON è una ricetta.
+- Se trovi un indice, usalo come CHECKLIST per verificare di aver estratto tutte le ricette
+- Estrai le ricette nell'ordine in cui appaiono DOPO l'indice
+- NON saltare la prima ricetta
+- Assicurati di estrarre DALLA PRIMA ALL'ULTIMA ricetta del documento
+- Separa chiaramente ogni ricetta con una doppia linea orizzontale (\`---\`)
+
+### 2. STRUTTURA FLESSIBILE
+- Adatta il numero di sezioni per ogni ricetta individualmente
+- Alcune ricette avranno 2 sezioni, altre 5-6 o più
+- Ogni ricetta può avere una struttura diversa
+
+### 3. NOMI DELLE SEZIONI - REGOLA FONDAMENTALE
+- Copia ESATTAMENTE il nome della sezione come appare nel documento originale
+- NON abbreviare, NON parafrasare, NON modificare
+- Mantieni "Per" se presente (es: "Per i pomodori confit" NON "i pomodori confit")
+- Mantieni "La/Il/I/Le" se presente (es: "La genovese" NON "genovese")
+- Mantieni maiuscole/minuscole come nell'originale
+- Esempi CORRETTI: "Per i pomodorini confit", "Per la genovese", "La pasta", "Il ragù"
+- Esempi SBAGLIATI: "i pomodorini confit" (manca "Per"), "genovese" (manca "La")
+
+### 4. QUANTITÀ PRECISE
+- Riporta tutte le quantità esattamente come nel documento originale
+- Includi sempre le unità di misura
+
+### 5. PROCEDIMENTO DETTAGLIATO
+- Usa elenchi puntati per tutti i passaggi
+- Mantieni l'ordine cronologico
+- Includi tempistiche, temperature e dettagli tecnici
+- Riporta eventuali riferimenti a video o immagini
+
+### 6. TERMINOLOGIA
+- Mantieni tutta la terminologia italiana originale
+- Preserva i termini tecnici culinari
+
+### 7. NOTE E SUGGERIMENTI
+- Includi tutte le "NOTA BENE", suggerimenti, varianti o consigli
+- Riporta eventuali informazioni su attrezzature necessarie
+
+### 8. INFORMAZIONI FINALI
+- Per ogni ricetta riporta: porzioni, tempi di preparazione e cottura (se presenti)
+
+### 9. COMPLETEZZA
+- Assicurati di estrarre TUTTE le ricette presenti nel documento
+- Non omettere nessuna ricetta, anche se breve o semplice
+- Se il documento contiene un indice, usa quello come riferimento per verificare di aver estratto tutto
+
+---`;
+
+export async function POST(request: NextRequest) {
+  try {
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: 'API key di Anthropic non configurata' },
+        { status: 500 }
+      );
+    }
+
+    const formData = await request.formData();
+    const file = formData.get('file') as File;
+
+    if (!file) {
+      return NextResponse.json(
+        { error: 'Nessun file PDF fornito' },
+        { status: 400 }
+      );
+    }
+
+    // Validate file type
+    if (file.type !== 'application/pdf') {
+      return NextResponse.json(
+        { error: 'Il file deve essere un PDF' },
+        { status: 400 }
+      );
+    }
+
+    // Validate file size (max 10MB)
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+      return NextResponse.json(
+        { error: 'Il file PDF è troppo grande (max 10MB)' },
+        { status: 400 }
+      );
+    }
+
+    // Convert file to buffer and then to base64
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const base64Pdf = buffer.toString('base64');
+
+    // Initialize Anthropic client
+    const anthropic = new Anthropic({
+      apiKey: apiKey,
+    });
+
+    // Call Claude API with native PDF support
+    const message = await anthropic.messages.create({
+      model: 'claude-sonnet-4-5',
+      max_tokens: 16000,
+      system: 'Sei un esperto estrattore di ricette culinarie. Il tuo compito è preservare fedelmente la struttura, i nomi delle sezioni e tutti i dettagli esattamente come appaiono nel documento originale.',
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'document',
+              source: {
+                type: 'base64',
+                media_type: 'application/pdf',
+                data: base64Pdf,
+              },
+            },
+            {
+              type: 'text',
+              text: EXTRACTION_PROMPT,
+            },
+          ],
+        },
+      ],
+    });
+
+    // Extract text from response
+    const extractedText = message.content
+      .filter((block) => block.type === 'text')
+      .map((block) => (block as any).text)
+      .join('\n');
+
+    return NextResponse.json({
+      success: true,
+      extractedRecipes: extractedText,
+      metadata: {
+        model: 'claude-sonnet-4-5',
+        fileSize: file.size,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error extracting recipes:', error);
+
+    return NextResponse.json(
+      {
+        error: 'Errore durante l\'estrazione delle ricette',
+        details: error.message
+      },
+      { status: 500 }
+    );
+  }
+}
