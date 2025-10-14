@@ -10,6 +10,7 @@ const navItems = [
   { href: '/categorie', label: 'Categorie' },
   { href: '/cotture-in-corso', label: 'Cotture in corso' },
   { href: '/ricette/new', label: 'Nuova ricetta' },
+  { href: '/estrattore-ricette', label: '✨ Estrattore AI' },
 ];
 
 export function Sidebar() {
