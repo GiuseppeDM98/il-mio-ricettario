@@ -66,17 +66,17 @@ function parseRecipeSection(section: string): ParsedRecipe | null {
     // Check for section headers
     if (line.startsWith('## Ingredienti')) {
       currentSection = 'ingredients';
-      // Extract section name (e.g., "## Ingredienti per la pasta" -> "La pasta")
-      const sectionMatch = line.match(/##\s+Ingredienti(?:\s+per\s+(.+))?$/i);
-      currentIngredientSection = sectionMatch?.[1] || null;
+      // Extract section name (e.g., "## Ingredienti per la pasta" -> "Per la pasta")
+      const sectionMatch = line.match(/##\s+Ingredienti(?:\s+(per\s+.+))?$/i);
+      currentIngredientSection = capitalizeSectionName(sectionMatch?.[1] || null);
       continue;
     }
 
     if (line.startsWith('## Procedimento')) {
       currentSection = 'steps';
-      // Extract section name
-      const sectionMatch = line.match(/##\s+Procedimento(?:\s+per\s+(.+))?$/i);
-      currentStepSection = sectionMatch?.[1] || null;
+      // Extract section name (e.g., "## Procedimento per la genovese" -> "Per la genovese")
+      const sectionMatch = line.match(/##\s+Procedimento(?:\s+(per\s+.+))?$/i);
+      currentStepSection = capitalizeSectionName(sectionMatch?.[1] || null);
       continue;
     }
 
@@ -234,4 +234,23 @@ function parseTimeToMinutes(timeStr: string): number {
   }
 
   return 0;
+}
+
+/**
+ * Capitalize first letter of section name if it starts with "per"
+ * Examples:
+ *   "per la genovese" → "Per la genovese"
+ *   "Per la pasta" → "Per la pasta" (unchanged)
+ *   "PER la genovese" → "Per la genovese" (normalized)
+ *   "La pasta" → "La pasta" (unchanged, doesn't start with "per")
+ */
+function capitalizeSectionName(sectionName: string | null): string | null {
+  if (!sectionName) return null;
+
+  // If starts with "per " (any case), normalize to "Per " with capital P
+  if (sectionName.toLowerCase().startsWith('per ')) {
+    return 'Per' + sectionName.substring(3);
+  }
+
+  return sectionName;
 }
