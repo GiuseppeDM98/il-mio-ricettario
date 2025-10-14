@@ -7,6 +7,9 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 interface IngredientListCollapsibleProps {
   ingredients: Ingredient[];
   defaultExpanded?: boolean;
+  interactive?: boolean;
+  checkedIngredients?: string[];
+  onToggleIngredient?: (ingredientId: string) => void;
 }
 
 interface GroupedIngredients {
@@ -14,7 +17,13 @@ interface GroupedIngredients {
   ingredients: Ingredient[];
 }
 
-export function IngredientListCollapsible({ ingredients, defaultExpanded = false }: IngredientListCollapsibleProps) {
+export function IngredientListCollapsible({
+  ingredients,
+  defaultExpanded = false,
+  interactive = false,
+  checkedIngredients = [],
+  onToggleIngredient,
+}: IngredientListCollapsibleProps) {
   // Group ingredients by section
   const groupedIngredients: GroupedIngredients[] = [];
   const ingredientsBySection = new Map<string | null, Ingredient[]>();
@@ -65,17 +74,33 @@ export function IngredientListCollapsible({ ingredients, defaultExpanded = false
         if (!hasSection) {
           return (
             <ul key={sectionKey} className="space-y-3">
-              {group.ingredients.map((ingredient) => (
-                <li key={ingredient.id} className="flex items-start">
-                  <span className="flex-shrink-0 mr-3 text-primary">&#10003;</span>
-                  <div>
-                    <span className="font-medium">{ingredient.name}</span>
-                    {ingredient.quantity && (
-                      <span className="text-gray-500 ml-2">({ingredient.quantity})</span>
+              {group.ingredients.map((ingredient) => {
+                const isChecked = checkedIngredients.includes(ingredient.id);
+                return (
+                  <li
+                    key={ingredient.id}
+                    className={`flex items-start ${interactive ? 'cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors' : ''}`}
+                    onClick={() => interactive && onToggleIngredient?.(ingredient.id)}
+                  >
+                    {interactive ? (
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => onToggleIngredient?.(ingredient.id)}
+                        className="flex-shrink-0 mr-3 mt-1 w-5 h-5 cursor-pointer"
+                      />
+                    ) : (
+                      <span className="flex-shrink-0 mr-3 text-primary">&#10003;</span>
                     )}
-                  </div>
-                </li>
-              ))}
+                    <div className={isChecked && interactive ? 'line-through text-gray-400' : ''}>
+                      <span className="font-medium">{ingredient.name}</span>
+                      {ingredient.quantity && (
+                        <span className="text-gray-500 ml-2">({ingredient.quantity})</span>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           );
         }
@@ -104,17 +129,33 @@ export function IngredientListCollapsible({ ingredients, defaultExpanded = false
             {isExpanded && (
               <div className="p-4 border-t">
                 <ul className="space-y-3">
-                  {group.ingredients.map((ingredient) => (
-                    <li key={ingredient.id} className="flex items-start">
-                      <span className="flex-shrink-0 mr-3 text-primary">&#10003;</span>
-                      <div>
-                        <span className="font-medium">{ingredient.name}</span>
-                        {ingredient.quantity && (
-                          <span className="text-gray-500 ml-2">({ingredient.quantity})</span>
+                  {group.ingredients.map((ingredient) => {
+                    const isChecked = checkedIngredients.includes(ingredient.id);
+                    return (
+                      <li
+                        key={ingredient.id}
+                        className={`flex items-start ${interactive ? 'cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors' : ''}`}
+                        onClick={() => interactive && onToggleIngredient?.(ingredient.id)}
+                      >
+                        {interactive ? (
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => onToggleIngredient?.(ingredient.id)}
+                            className="flex-shrink-0 mr-3 mt-1 w-5 h-5 cursor-pointer"
+                          />
+                        ) : (
+                          <span className="flex-shrink-0 mr-3 text-primary">&#10003;</span>
                         )}
-                      </div>
-                    </li>
-                  ))}
+                        <div className={isChecked && interactive ? 'line-through text-gray-400' : ''}>
+                          <span className="font-medium">{ingredient.name}</span>
+                          {ingredient.quantity && (
+                            <span className="text-gray-500 ml-2">({ingredient.quantity})</span>
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             )}

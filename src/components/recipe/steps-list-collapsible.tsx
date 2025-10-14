@@ -7,6 +7,9 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 interface StepsListCollapsibleProps {
   steps: Step[];
   defaultExpanded?: boolean;
+  interactive?: boolean;
+  checkedSteps?: string[];
+  onToggleStep?: (stepId: string) => void;
 }
 
 interface GroupedSteps {
@@ -14,7 +17,13 @@ interface GroupedSteps {
   steps: Step[];
 }
 
-export function StepsListCollapsible({ steps, defaultExpanded = false }: StepsListCollapsibleProps) {
+export function StepsListCollapsible({
+  steps,
+  defaultExpanded = false,
+  interactive = false,
+  checkedSteps = [],
+  onToggleStep,
+}: StepsListCollapsibleProps) {
   // Group steps by section
   const groupedSteps: GroupedSteps[] = [];
   const stepsBySection = new Map<string | null, Step[]>();
@@ -70,18 +79,31 @@ export function StepsListCollapsible({ steps, defaultExpanded = false }: StepsLi
             <div key={sectionKey} className="space-y-4">
               {group.steps.map((step) => {
                 globalStepNumber++;
+                const isChecked = checkedSteps.includes(step.id);
                 return (
-                  <div key={step.id} className="flex items-start">
-                    <div className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold mr-4">
+                  <div
+                    key={step.id}
+                    className={`flex items-start ${interactive ? 'cursor-pointer hover:bg-gray-50 p-3 rounded transition-colors' : ''}`}
+                    onClick={() => interactive && onToggleStep?.(step.id)}
+                  >
+                    {interactive && (
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => onToggleStep?.(step.id)}
+                        className="flex-shrink-0 mr-3 mt-1 w-5 h-5 cursor-pointer"
+                      />
+                    )}
+                    <div className={`flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full ${isChecked && interactive ? 'bg-gray-400' : 'bg-primary'} text-primary-foreground font-bold mr-4`}>
                       {globalStepNumber}
                     </div>
-                    <div className="flex-1">
+                    <div className={`flex-1 ${isChecked && interactive ? 'opacity-50' : ''}`}>
                       {(() => {
                         const lines = step.description.split('\n').filter(line => line.trim());
                         if (lines.length === 0) return null;
 
                         if (lines.length === 1) {
-                          return <p className="text-gray-800">{lines[0]}</p>;
+                          return <p className={`text-gray-800 ${isChecked && interactive ? 'line-through' : ''}`}>{lines[0]}</p>;
                         }
 
                         return (
@@ -89,14 +111,14 @@ export function StepsListCollapsible({ steps, defaultExpanded = false }: StepsLi
                             {lines.map((line, idx) => (
                               <div key={idx} className="flex items-start gap-2">
                                 <span className="text-gray-500 mt-1 flex-shrink-0">•</span>
-                                <p className="text-gray-800 flex-1">{line}</p>
+                                <p className={`text-gray-800 flex-1 ${isChecked && interactive ? 'line-through' : ''}`}>{line}</p>
                               </div>
                             ))}
                           </div>
                         );
                       })()}
                       {step.duration && (
-                        <p className="text-sm text-gray-500 mt-1">
+                        <p className={`text-sm text-gray-500 mt-1 ${isChecked && interactive ? 'line-through' : ''}`}>
                           Tempo: {step.duration} min
                         </p>
                       )}
@@ -133,18 +155,31 @@ export function StepsListCollapsible({ steps, defaultExpanded = false }: StepsLi
               <div className="p-4 space-y-4 border-t">
                 {group.steps.map((step) => {
                   globalStepNumber++;
+                  const isChecked = checkedSteps.includes(step.id);
                   return (
-                    <div key={step.id} className="flex items-start">
-                      <div className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold mr-4">
+                    <div
+                      key={step.id}
+                      className={`flex items-start ${interactive ? 'cursor-pointer hover:bg-gray-50 p-3 rounded transition-colors' : ''}`}
+                      onClick={() => interactive && onToggleStep?.(step.id)}
+                    >
+                      {interactive && (
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => onToggleStep?.(step.id)}
+                          className="flex-shrink-0 mr-3 mt-1 w-5 h-5 cursor-pointer"
+                        />
+                      )}
+                      <div className={`flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full ${isChecked && interactive ? 'bg-gray-400' : 'bg-primary'} text-primary-foreground font-bold mr-4`}>
                         {globalStepNumber}
                       </div>
-                      <div className="flex-1">
+                      <div className={`flex-1 ${isChecked && interactive ? 'opacity-50' : ''}`}>
                         {(() => {
                           const lines = step.description.split('\n').filter(line => line.trim());
                           if (lines.length === 0) return null;
 
                           if (lines.length === 1) {
-                            return <p className="text-gray-800">{lines[0]}</p>;
+                            return <p className={`text-gray-800 ${isChecked && interactive ? 'line-through' : ''}`}>{lines[0]}</p>;
                           }
 
                           return (
@@ -152,14 +187,14 @@ export function StepsListCollapsible({ steps, defaultExpanded = false }: StepsLi
                               {lines.map((line, idx) => (
                                 <div key={idx} className="flex items-start gap-2">
                                   <span className="text-gray-500 mt-1 flex-shrink-0">•</span>
-                                  <p className="text-gray-800 flex-1">{line}</p>
+                                  <p className={`text-gray-800 flex-1 ${isChecked && interactive ? 'line-through' : ''}`}>{line}</p>
                                 </div>
                               ))}
                             </div>
                           );
                         })()}
                         {step.duration && (
-                          <p className="text-sm text-gray-500 mt-1">
+                          <p className={`text-sm text-gray-500 mt-1 ${isChecked && interactive ? 'line-through' : ''}`}>
                             Tempo: {step.duration} min
                           </p>
                         )}
