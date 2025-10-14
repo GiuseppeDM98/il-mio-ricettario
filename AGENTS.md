@@ -1,6 +1,181 @@
-# AI Agent Guidelines for Code Development
+# AI Agent Guidelines for Il Mio Ricettario
 
 This document provides instructions for AI agents working on this codebase. Follow these principles when proposing new code or modifying existing code.
+
+## Project Overview
+
+**Il Mio Ricettario** is a Next.js 14 recipe management app using Firebase backend, designed as a mobile-first, text-focused digital cookbook.
+
+### Tech Stack
+- **Frontend**: Next.js 14 (App Router), React 18, TypeScript 5
+- **Backend**: Firebase (Auth, Firestore, Hosting)
+- **Styling**: Tailwind CSS with HSL-based design system
+- **Testing**: Jest with jsdom environment
+- **Validation**: Zod schemas
+- **Key Libraries**: Radix UI components, lucide-react icons, uuid
+
+### Architecture Pattern
+- **App Router structure**: Route groups `(auth)` and `(dashboard)` with separate layouts
+- **Context-based auth**: `AuthProvider` wraps the app, `useAuth()` hook for access
+- **Custom hooks pattern**: `useRecipes()`, `useAuth()`, `useToast()` for state management
+- **Firebase service layer**: Separate files in `lib/firebase/` for firestore, auth, categories, storage
+- **Type-safe**: All domain models defined in `src/types/index.ts`
+
+---
+
+## Development Workflow
+
+### Local Development
+```bash
+npm run dev          # Start dev server on http://localhost:3000
+npm run build        # Production build (standalone output)
+npm run lint         # ESLint check
+npm test             # Run Jest tests
+npx tsc --noEmit     # TypeScript check
+```
+
+### Firebase Operations
+```bash
+firebase login                      # Authenticate
+firebase deploy --only firestore:rules   # Deploy security rules
+firebase deploy --only hosting           # Deploy app
+```
+
+### Environment Setup
+- Create `.env.local` with Firebase config (see README.md)
+- Never commit `.env.local` or Firebase credentials
+- Root redirect `/` → `/ricette` configured in [next.config.js](next.config.js:7-14)
+
+---
+
+## Critical Codebase Patterns
+
+### 1. Authentication Flow
+- All auth logic in [lib/context/auth-context.tsx](src/lib/context/auth-context.tsx)
+- New users automatically get default categories via `initializeDefaultCategories()` ([lib/firebase/categories.ts](src/lib/firebase/categories.ts:26-39))
+- Protected routes use `ProtectedRoute` component that checks auth state
+- Access auth with `const { user, signIn, signOut } = useAuth()`
+
+### 2. Data Ownership Model
+- **Every** Firestore document has a `userId` field
+- Security rules enforce ownership: users can only read/write their own data ([firebase/firestore.rules](firebase/firestore.rules:9-11))
+- All Firestore queries MUST filter by `userId` (see [lib/firebase/firestore.ts](src/lib/firebase/firestore.ts:49-55))
+
+### 3. Recipe Data Structure
+Recipes use a **flat array of ingredients** with optional `section` field for grouping:
+```typescript
+interface Ingredient {
+  id: string;
+  name: string;
+  quantity: string;
+  section?: string;  // Groups ingredients (e.g., "Per la pasta")
+}
+```
+- Form UI uses hierarchical `IngredientSection[]` structure ([recipe-form.tsx](src/components/recipe/recipe-form.tsx:18-22))
+- Conversion: hierarchical → flat happens on submit ([recipe-form.tsx](src/components/recipe/recipe-form.tsx:178-190))
+- Conversion: flat → hierarchical on load ([recipe-form.tsx](src/components/recipe/recipe-form.tsx:107-149))
+
+Similar pattern for `Step.section` to group preparation steps.
+
+### 4. Firebase Timestamps
+- Use `serverTimestamp()` for all `createdAt`/`updatedAt` fields
+- TypeScript type is `Timestamp` from `firebase/firestore`
+- Never manually create timestamps
+
+### 5. Component Patterns
+- **UI components** in `components/ui/`: Button, Input, Card, Dialog, Sheet (Radix-based)
+- **Feature components** in `components/{feature}/`: auth, recipe, layout
+- Use `cn()` utility from [lib/utils/cn.ts](src/lib/utils/cn.ts) for conditional classes
+- Mobile-first: test responsive behavior at breakpoints `sm:`, `md:`, `lg:`
+
+### 6. Styling System
+- Design tokens via CSS variables in HSL format (see [tailwind.config.ts](tailwind.config.ts:11-54))
+- Primary color: Red theme (#ef4444 variants)
+- Use semantic colors: `bg-primary`, `text-muted-foreground`, `border`
+- Avoid hardcoded colors; extend theme if needed
+
+---
+
+## Project-Specific Conventions
+
+### File Naming
+- React components: PascalCase files, e.g., `RecipeForm.tsx` → component `RecipeForm`
+- Utilities/hooks: camelCase, e.g., `useRecipes.ts`, `validation.ts`
+- Route folders: kebab-case with dynamic segments `[id]`
+
+### TypeScript Usage
+- All types centralized in [src/types/index.ts](src/types/index.ts)
+- Use Zod schemas for validation ([lib/utils/validation.ts](src/lib/utils/validation.ts))
+- Prefer interfaces for domain models, types for utilities
+- Enable strict null checks; avoid `any`
+
+### Import Aliases
+- Use `@/` for all imports: `import { Recipe } from '@/types'`
+- Configured in `tsconfig.json` and `jest.config.js`
+
+### Error Handling
+- Use try-catch in async operations
+- Display user-facing errors via `toast()` from [lib/hooks/use-toast.ts](src/lib/hooks/use-toast.ts)
+- Log errors with `console.error()` for debugging
+
+### UUID Generation
+- Use `uuid` library: `import { v4 as uuidv4 } from 'uuid'`
+- Generate client-side IDs for ingredients/steps (see [recipe-form.tsx](src/components/recipe/recipe-form.tsx:10))
+
+---
+
+## Testing Strategy
+
+### Current Setup
+- Jest configured with `next/jest` wrapper
+- Test environment: jsdom (see [jest.config.js](jest.config.js))
+- Existing test example: [components/layout/header.test.tsx](src/components/layout/header.test.tsx)
+
+### When Writing Tests
+- Place tests next to components: `Component.test.tsx`
+- Use `@testing-library/react` for component tests
+- Use `@testing-library/jest-dom` matchers
+- Mock Firebase calls (avoid real API calls in tests)
+
+---
+
+## Phase-Based Development
+
+The project follows a 3-phase roadmap (see README.md):
+
+### Phase 1 (MVP - Current)
+- ✅ Auth (Email + Google OAuth)
+- ✅ Recipe CRUD with ingredients/steps
+- ✅ Categories/subcategories
+- ✅ Mobile-responsive UI
+- ✅ Cooking mode (screen wake lock via nosleep.js)
+
+### Phase 2 (Planned)
+- Advanced search & filters
+- URL import (e.g., GialloZafferano)
+- Technique notes system
+- Recipe-technique linking
+
+### Phase 3 (AI Features)
+- PDF import with Claude AI
+- Auto-categorization
+- Recipe enhancement
+
+**Important**: When adding features, check which phase they belong to. Don't implement Phase 3 features if Phase 2 dependencies aren't ready.
+
+---
+
+## Design Philosophy
+
+From README.md:
+> Un ricettario pulito e text-based, senza immagini. Il focus è sul contenuto - ingredienti, procedimenti e tecniche.
+
+- **No image uploads** in current design (Phase 1)
+- Prioritize fast loading and mobile UX
+- Use emojis for visual cues (categories, UI elements)
+- Keep UI minimal and functional for kitchen use
+
+---
 
 ## General Principles
 
