@@ -113,6 +113,11 @@ cd il-mio-ricettario
 npm install
 ```
 
+Se da visual studio code si riceve un errore per l'esecuzione di alcuni comandi, eseguire questo
+```
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process
+```
+
 ### 3. Setup Firebase
 
 #### a) Crea un progetto Firebase
