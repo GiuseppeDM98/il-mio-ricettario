@@ -132,11 +132,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate file size (max 10MB)
-    const maxSize = 10 * 1024 * 1024; // 10MB
+    // Validate file size (max 4.4MB - Vercel limit)
+    const maxSize = 4.4 * 1024 * 1024; // 4.4MB
     if (file.size > maxSize) {
       return NextResponse.json(
-        { error: 'Il file PDF è troppo grande (max 10MB)' },
+        { error: 'Il file PDF è troppo grande (max 4.4MB). Prova a ridurre la dimensione del PDF usando servizi come iLovePDF (https://www.ilovepdf.com/it/comprimere_pdf) e riprova.' },
         { status: 400 }
       );
     }
