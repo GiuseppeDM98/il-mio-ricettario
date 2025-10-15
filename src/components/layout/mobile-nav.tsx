@@ -3,12 +3,15 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Menu, X } from 'lucide-react';
 
 const navItems = [
   { href: '/ricette', label: 'Le mie ricette' },
+  { href: '/categorie', label: 'Categorie' },
+  { href: '/cotture-in-corso', label: 'Cotture in corso' },
   { href: '/ricette/new', label: 'Nuova ricetta' },
+  { href: '/estrattore-ricette', label: '✨ Estrattore AI' },
 ];
 
 export function MobileNav() {
@@ -23,6 +26,10 @@ export function MobileNav() {
         </Button>
       </SheetTrigger>
       <SheetContent side="left" className="w-full max-w-xs">
+        <SheetTitle className="sr-only">Menu di navigazione</SheetTitle>
+        <SheetDescription className="sr-only">
+          Naviga tra le sezioni dell'app
+        </SheetDescription>
         <div className="flex justify-between items-center mb-6">
             <Link href="/" onClick={() => setIsOpen(false)}>
                 <h2 className="text-lg font-bold">Il Mio Ricettario</h2>
