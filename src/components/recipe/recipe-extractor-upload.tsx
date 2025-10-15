@@ -47,10 +47,17 @@ export function RecipeExtractorUpload({ onFileSelected, isLoading }: RecipeExtra
   };
 
   const handleFileSelection = (file: File) => {
-    // Check file size (max 10MB)
-    const maxSize = 10 * 1024 * 1024;
+    // Check file size (max 4.4MB - Vercel limit)
+    const maxSize = 4.4 * 1024 * 1024;
     if (file.size > maxSize) {
-      alert('Il file è troppo grande. Dimensione massima: 10MB');
+      alert(
+        'Il file è troppo grande (max 4.4MB a causa dei limiti di Vercel).\n\n' +
+        'Per ridurre la dimensione del PDF, puoi usare un servizio gratuito come:\n' +
+        '• iLovePDF (https://www.ilovepdf.com/it/comprimere_pdf)\n' +
+        '• Adobe Acrobat Online\n' +
+        '• Smallpdf\n\n' +
+        'Dopo aver compresso il PDF, riprova a caricarlo.'
+      );
       return;
     }
 
@@ -115,7 +122,7 @@ export function RecipeExtractorUpload({ onFileSelected, isLoading }: RecipeExtra
               Seleziona PDF
             </Button>
             <p className="text-xs text-gray-400">
-              Dimensione massima: 10MB
+              Dimensione massima: 4.4MB
             </p>
           </div>
         ) : (
