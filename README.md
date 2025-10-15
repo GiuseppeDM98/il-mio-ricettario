@@ -8,7 +8,7 @@
 
 **Il ricettario digitale intelligente che cresce con te - dalla ricetta alle tecniche, dal privato alla community**
 
-Un'applicazione web moderna per organizzare, catalogare e condividere le tue ricette preferite, con funzionalità AI pianificate per importare ricette da PDF e migliorare la tua esperienza culinaria.
+Un'applicazione web moderna per organizzare, catalogare e condividere le tue ricette preferite, con **funzionalità AI integrate** per estrarre automaticamente ricette da PDF e una modalità cooking avanzata con tracciamento del progresso.
 
 > 💡 **Design Philosophy**: Un ricettario pulito e text-based, senza immagini. Il focus è sul contenuto - ingredienti, procedimenti e tecniche - per un'esperienza veloce e funzionale in cucina.
 
@@ -35,10 +35,29 @@ Un'applicazione web moderna per organizzare, catalogare e condividere le tue ric
 - Navigazione mobile con floating button
 - Touch-friendly UI per uso in cucina
 
-### 👨‍🍳 Modalità Cooking
+### 👨‍🍳 Modalità Cooking Avanzata
 - **Schermo sempre acceso** durante la preparazione (via nosleep.js)
+- **Tracciamento progresso in tempo reale**: checkbox per ingredienti e step completati
+- **Sessioni salvate in Firestore**: riprendi la preparazione da dove ti sei fermato
+- **Progress bar visuale** con statistiche ingredienti/step completati
 - Vista ottimizzata per seguire la ricetta step-by-step
 - Layout pulito e leggibile anche da lontano
+
+### 🤖 Estrattore AI di Ricette ✨ (IMPLEMENTATO)
+- **Import automatico da PDF** con Claude AI 4.5 (Anthropic)
+- **Supporto PDF multipagina**: estrae automaticamente TUTTE le ricette presenti nel documento
+- **Parser intelligente** con preservazione struttura originale (sezioni ingredienti/procedimento)
+- **Anteprima editabile**: controlla e modifica ogni ricetta prima di salvare
+- **Normalizzazione automatica**: tempi convertiti in minuti, sezioni capitalizzate
+- **Salvataggio selettivo**: scegli quali ricette salvare o salva tutto in batch
+- **API endpoint dedicato**: `/api/extract-recipes` con validazione file (max 10MB)
+
+### 📋 Cotture in Corso (IMPLEMENTATO)
+- **Dashboard dedicata** per visualizzare tutte le preparazioni attive
+- **Progress tracking dettagliato**: vedi a che punto sei con ogni ricetta
+- **Checkbox interattive**: spunta ingredienti e step man mano che li completi
+- **Ripresa sessioni**: continua le preparazioni interrotte in qualsiasi momento
+- **Statistiche live**: ingredienti/step completati vs totali con percentuale progresso
 
 ### 🎯 Roadmap Features
 
@@ -48,12 +67,7 @@ Un'applicazione web moderna per organizzare, catalogare e condividere le tue ric
 - Import ricette da URL (GialloZafferano, etc.)
 - Note tecniche di cucina (dry brining, cottura ibrida, etc.)
 - Collegamenti intelligenti tra tecniche e ricette
-
-**Phase 3 - AI Magic** (Pianificato)
-- Import automatico da PDF con Claude AI
-- Auto-categorizzazione intelligente
-- Miglioramento ricette (tempi, difficoltà)
-- Batch import da PDF multipagina
+- Auto-categorizzazione AI delle ricette estratte
 
 ---
 
@@ -74,6 +88,7 @@ Un'applicazione web moderna per organizzare, catalogare e condividere le tue ric
 - **[Firebase Authentication](https://firebase.google.com/docs/auth)** - Gestione utenti (Email + Google OAuth)
 - **[Cloud Firestore](https://firebase.google.com/docs/firestore)** - Database NoSQL real-time
 - **[Firebase Hosting](https://firebase.google.com/docs/hosting)** - Hosting statico con CDN
+- **[Anthropic Claude API](https://docs.anthropic.com/)** - AI per estrazione ricette da PDF (Claude 4.5 Sonnet)
 
 ### Development Tools
 - **[Jest](https://jestjs.io/)** - Testing framework
@@ -94,6 +109,7 @@ Un'applicazione web moderna per organizzare, catalogare e condividere le tue ric
 - **npm** o **yarn**
 - **Git**
 - **Account Firebase** (piano gratuito disponibile)
+- **Anthropic API Key** (per funzionalità estrattore AI) - [Ottieni qui](https://console.anthropic.com/)
 - (Opzionale) **Firebase CLI** per deployment
 
 ---
@@ -151,18 +167,24 @@ Crea un file `.env.local` nella root del progetto:
 cp .env.example .env.local
 ```
 
-Modifica `.env.local` con le tue credenziali Firebase:
+Modifica `.env.local` con le tue credenziali Firebase e Anthropic:
 
 ```bash
+# Firebase Configuration
 NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSy...
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=il-mio-ricettario.firebaseapp.com
 NEXT_PUBLIC_FIREBASE_PROJECT_ID=il-mio-ricettario
 NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=il-mio-ricettario.appspot.com
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=123456789
 NEXT_PUBLIC_FIREBASE_APP_ID=1:123456789:web:abcdef
+
+# Anthropic AI Configuration (per estrattore ricette)
+ANTHROPIC_API_KEY=sk-ant-api03-...
 ```
 
-⚠️ **IMPORTANTE**: Non committare mai il file `.env.local`. È già incluso in `.gitignore`.
+⚠️ **IMPORTANTE**:
+- Non committare mai il file `.env.local`. È già incluso in `.gitignore`.
+- La chiave `ANTHROPIC_API_KEY` è usata solo lato server (API route) e NON deve avere il prefisso `NEXT_PUBLIC_`.
 
 ### 5. Deploy Firebase Security Rules
 
@@ -287,9 +309,31 @@ Dovresti vedere la pagina di login. Crea un account per iniziare!
 2. Clicca su "👨‍🍳 Inizia a Cucinare"
 3. Lo schermo rimane acceso automaticamente
 4. Vista ottimizzata:
-   - Ingredienti raggruppati per sezione (collapsible)
-   - Step numerati e sezionati
+   - Ingredienti raggruppati per sezione (collapsible) con checkbox
+   - Step numerati e sezionati con checkbox
    - Tempi e porzioni in evidenza
+   - Progress bar con percentuale completamento
+5. La sessione viene salvata automaticamente in Firestore
+6. Riprendi da "📋 Cotture in Corso" in qualsiasi momento
+
+### Estrattore AI di Ricette
+
+1. Vai su "✨ Estrattore AI" dal menu
+2. Carica un file PDF contenente ricette (max 10MB)
+3. Attendi l'analisi (pochi secondi)
+4. Controlla le ricette estratte:
+   - Ogni ricetta viene presentata in anteprima
+   - Ingredienti organizzati per sezioni
+   - Step di preparazione numerati
+   - Metadati (porzioni, tempi) già parsati
+5. Modifica se necessario (opzionale)
+6. Salva singolarmente o tutte in batch
+7. Le ricette vengono aggiunte al tuo ricettario con source type "pdf"
+
+💡 **Tips per migliori risultati**:
+- PDF ben strutturati con sezioni chiare
+- Testo selezionabile (non solo immagini scansionate)
+- Ricette con format tradizionale (ingredienti → procedimento)
 
 ### Gestire Categorie
 
@@ -341,16 +385,19 @@ allow read, write: if request.auth != null
 
 ### Variabili d'Ambiente
 
-| Variabile | Descrizione | Esempio |
-|-----------|-------------|---------|
-| `NEXT_PUBLIC_FIREBASE_API_KEY` | Firebase API key | `AIzaSy...` |
-| `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | Auth domain | `app.firebaseapp.com` |
-| `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | Project ID | `il-mio-ricettario` |
-| `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | Storage bucket | `app.appspot.com` |
-| `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | Sender ID | `123456789` |
-| `NEXT_PUBLIC_FIREBASE_APP_ID` | App ID | `1:123:web:abc` |
+| Variabile | Descrizione | Esempio | Visibilità |
+|-----------|-------------|---------|------------|
+| `NEXT_PUBLIC_FIREBASE_API_KEY` | Firebase API key | `AIzaSy...` | Client + Server |
+| `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | Auth domain | `app.firebaseapp.com` | Client + Server |
+| `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | Project ID | `il-mio-ricettario` | Client + Server |
+| `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | Storage bucket | `app.appspot.com` | Client + Server |
+| `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | Sender ID | `123456789` | Client + Server |
+| `NEXT_PUBLIC_FIREBASE_APP_ID` | App ID | `1:123:web:abc` | Client + Server |
+| `ANTHROPIC_API_KEY` | Anthropic API key per Claude | `sk-ant-api03-...` | Solo Server |
 
-⚠️ **NOTA**: Tutte le variabili Firebase devono avere prefisso `NEXT_PUBLIC_` per essere accessibili nel client.
+⚠️ **NOTE**:
+- Tutte le variabili Firebase devono avere prefisso `NEXT_PUBLIC_` per essere accessibili nel client
+- `ANTHROPIC_API_KEY` NON deve avere il prefisso `NEXT_PUBLIC_` (usata solo nelle API routes server-side)
 
 ---
 
@@ -377,6 +424,9 @@ npm run dev
 il-mio-ricettario/
 ├── src/
 │   ├── app/                           # Next.js App Router
+│   │   ├── api/                      # API Routes (Server-side)
+│   │   │   └── extract-recipes/     # Endpoint AI per estrazione ricette
+│   │   │       └── route.ts         # POST /api/extract-recipes
 │   │   ├── (auth)/                   # Route group: autenticazione
 │   │   │   ├── login/page.tsx
 │   │   │   └── register/page.tsx
@@ -389,7 +439,9 @@ il-mio-ricettario/
 │   │   │   │       ├── page.tsx     # Dettaglio ricetta
 │   │   │   │       ├── edit/page.tsx
 │   │   │   │       └── cooking/page.tsx  # Modalità cooking
-│   │   │   └── categorie/page.tsx
+│   │   │   ├── categorie/page.tsx
+│   │   │   ├── cotture-in-corso/page.tsx  # Dashboard cotture attive
+│   │   │   └── estrattore-ricette/page.tsx # UI estrattore AI
 │   │   ├── layout.tsx               # Root layout (AuthProvider)
 │   │   └── page.tsx                 # Home (redirect)
 │   │
@@ -404,7 +456,9 @@ il-mio-ricettario/
 │   │   │   ├── recipe-detail.tsx
 │   │   │   ├── ingredient-list-collapsible.tsx
 │   │   │   ├── steps-list-collapsible.tsx
-│   │   │   └── category-selector.tsx
+│   │   │   ├── category-selector.tsx
+│   │   │   ├── recipe-extractor-upload.tsx  # UI upload PDF
+│   │   │   └── extracted-recipe-preview.tsx # Anteprima ricetta estratta
 │   │   └── layout/                  # Layout components
 │   │       ├── header.tsx
 │   │       ├── sidebar.tsx
@@ -417,6 +471,7 @@ il-mio-ricettario/
 │   │   │   ├── auth.ts             # Auth helpers
 │   │   │   ├── firestore.ts        # Recipe CRUD
 │   │   │   ├── categories.ts       # Categories CRUD + defaults
+│   │   │   ├── cooking-sessions.ts # Sessioni cottura CRUD
 │   │   │   └── storage.ts          # File upload (futuro)
 │   │   ├── hooks/                   # Custom React hooks
 │   │   │   ├── useAuth.ts          # Re-export da auth-context
@@ -428,7 +483,8 @@ il-mio-ricettario/
 │   │       ├── cn.ts               # classnames utility
 │   │       ├── validation.ts       # Zod schemas
 │   │       ├── formatting.ts       # Time/date formatting
-│   │       └── constants.ts        # App constants
+│   │       ├── constants.ts        # App constants
+│   │       └── recipe-parser.ts    # Parser markdown → ricette strutturate
 │   │
 │   └── types/
 │       └── index.ts                 # TypeScript types globali
@@ -639,8 +695,107 @@ Vercel rileva automaticamente Next.js e configura:
 
 **Vercel**: Aggiungi env vars nel dashboard:
 1. Project Settings → Environment Variables
-2. Aggiungi tutte le `NEXT_PUBLIC_FIREBASE_*` vars
+2. Aggiungi tutte le variabili:
+   - `NEXT_PUBLIC_FIREBASE_*` (tutte le 6 variabili Firebase)
+   - `ANTHROPIC_API_KEY` (per estrattore AI)
 3. Select environments: Production, Preview, Development
+
+⚠️ **IMPORTANTE per Vercel**:
+- `ANTHROPIC_API_KEY` funziona solo con Vercel Pro/Enterprise (per API routes serverless)
+- Piano gratuito: considera alternative come Firebase Functions o backend separato
+
+---
+
+## 🤖 Architettura Estrattore AI
+
+### Flusso di Estrazione
+
+```
+1. Upload PDF (Frontend)
+   ↓
+2. Validazione (size, type)
+   ↓
+3. API Route /api/extract-recipes (Server)
+   ↓
+4. Conversione PDF → Base64
+   ↓
+5. Chiamata Claude API (Anthropic)
+   │  - Model: claude-sonnet-4-5
+   │  - Max tokens: 16000
+   │  - Native PDF support
+   │  - Prompt strutturato con istruzioni dettagliate
+   ↓
+6. Risposta Claude (Markdown formattato)
+   ↓
+7. Parsing Markdown → ParsedRecipe[] (recipe-parser.ts)
+   │  - Estrazione titoli (# headings)
+   │  - Parsing sezioni ingredienti (## Ingredienti per...)
+   │  - Parsing sezioni procedimento (## Procedimento per...)
+   │  - Estrazione metadati (porzioni, tempi)
+   │  - Normalizzazione nomi sezioni
+   │  - Conversione tempi in minuti
+   ↓
+8. Anteprima ricette estratte (Frontend)
+   ↓
+9. Salvataggio selettivo in Firestore
+```
+
+### Componenti Chiave
+
+#### API Route (`src/app/api/extract-recipes/route.ts`)
+- **Responsabilità**: Endpoint server-side per chiamate Claude API
+- **Input**: FormData con file PDF
+- **Output**: JSON con ricette estratte in markdown
+- **Validazioni**:
+  - File type: `application/pdf`
+  - Max size: 10MB
+  - API key presente
+- **Security**: API key server-side only (no client exposure)
+
+#### Parser (`src/lib/utils/recipe-parser.ts`)
+- **Funzione principale**: `parseExtractedRecipes(markdownText: string): ParsedRecipe[]`
+- **Pattern matching**:
+  - Separatore ricette: `---\s*---`
+  - Titolo ricetta: `# [Nome]`
+  - Sezioni ingredienti: `## Ingredienti (per ...)?`
+  - Sezioni procedimento: `## Procedimento (per ...)?`
+  - Metadati: `**Porzioni:**`, `**Tempo di preparazione:**`
+- **Normalizzazioni**:
+  - Capitalizzazione sezioni ("per la pasta" → "Per la pasta")
+  - Parsing tempi ("2 ore 30 min" → 150 minuti)
+  - Generazione UUID per ingredienti/step
+
+#### UI Components
+- **RecipeExtractorUpload**: Drag & drop / file picker per PDF
+- **ExtractedRecipePreview**: Card anteprima ricetta con edit inline
+- **Page**: `/estrattore-ricette` - Orchestrazione completa del flusso
+
+### Prompt Engineering
+
+Il prompt Claude è ottimizzato per:
+- **Completezza**: Estrarre TUTTE le ricette (non solo la prima)
+- **Struttura**: Preservare sezioni originali
+- **Precisione**: Nomi sezioni esatti dal documento
+- **Flessibilità**: Gestire formati diversi
+- **Robustezza**: Gestire indici, note, suggerimenti
+
+Vedi codice completo in [`src/app/api/extract-recipes/route.ts`](src/app/api/extract-recipes/route.ts).
+
+### Costi e Limiti
+
+**Claude API**:
+- Model: `claude-sonnet-4-5`
+- Costo ~$3 per 1M input tokens, $15 per 1M output tokens
+- 1 PDF tipico (10-20 ricette): ~$0.05-0.15
+- Max tokens output: 16000 (configurabile)
+
+**Firebase**:
+- Firestore: Scritture incluse nel piano gratuito fino a 20k/giorno
+- Storage: Non usato per PDF (conversione in-memory)
+
+**Vercel**:
+- Serverless Functions: Incluse in piano gratuito (100GB-hours/mese)
+- **NOTA**: Piano free potrebbe avere limiti su durata esecuzione API routes
 
 ---
 
@@ -786,7 +941,20 @@ jest.mock('firebase/firestore', () => ({
 }
 ```
 
-#### `techniques` (Phase 2)
+#### `cooking_sessions`
+```typescript
+{
+  id: string
+  recipeId: string               // ID della ricetta in cottura
+  userId: string
+  checkedIngredients: string[]   // Array di ID ingredienti completati
+  checkedSteps: string[]         // Array di ID step completati
+  startedAt: Timestamp
+  lastUpdatedAt: Timestamp
+}
+```
+
+#### `techniques` (Phase 2 - Pianificato)
 ```typescript
 {
   id: string
@@ -950,6 +1118,35 @@ render(
 )
 ```
 
+#### 7. Estrattore AI non funziona / "API key not configured"
+```bash
+# Verifica che ANTHROPIC_API_KEY sia in .env.local
+cat .env.local | grep ANTHROPIC
+
+# Deve mostrare:
+# ANTHROPIC_API_KEY=sk-ant-api03-...
+
+# Verifica che NON abbia il prefisso NEXT_PUBLIC_
+# ❌ WRONG: NEXT_PUBLIC_ANTHROPIC_API_KEY
+# ✅ CORRECT: ANTHROPIC_API_KEY
+
+# Riavvia il server dopo aver aggiunto la chiave
+npm run dev
+```
+
+#### 8. PDF troppo grande o estrazione fallita
+```bash
+# Limiti attuali:
+# - Max dimensione file: 10MB
+# - Formato supportato: PDF con testo selezionabile
+# - PDF scansionati (solo immagini) potrebbero non funzionare bene
+
+# Per PDF scansionati, considera di:
+# 1. Usare OCR esterno prima
+# 2. Convertire in PDF con testo
+# 3. Estrarre manualmente
+```
+
 ### Log e Debug
 
 ```typescript
@@ -1019,9 +1216,12 @@ SOFTWARE.
 - [x] Project setup & Firebase config
 - [x] Authentication (Email + Google OAuth)
 - [x] Recipe CRUD completo
-- [x] Categories system
+- [x] Categories system con sottocategorie
 - [x] Mobile-responsive UI
-- [x] Cooking mode
+- [x] Cooking mode avanzato con tracking progresso
+- [x] Sistema cotture in corso (sessioni salvate)
+- [x] **Estrattore AI ricette da PDF** (Claude 4.5)
+- [x] Parser intelligente markdown → ricette strutturate
 - [ ] Deploy su Firebase Hosting/Vercel
 
 ### Q2 2025 - Phase 2: Advanced Features
@@ -1039,18 +1239,19 @@ SOFTWARE.
   - [ ] Tag autocomplete
   - [ ] Tag cloud visualization
 
-### Q3 2025 - Phase 3: AI Magic
-- [ ] PDF import con Claude AI
-  - [ ] Upload PDF
-  - [ ] OCR + extraction con Claude API
-  - [ ] Auto-categorizzazione
-  - [ ] Batch import
-- [ ] Recipe enhancement
-  - [ ] Suggerimenti tempi/difficoltà
-  - [ ] Correzione ingredienti
+### Q3 2025 - Phase 3: AI Magic Avanzato
+- [ ] Miglioramenti estrattore AI
+  - [ ] Auto-categorizzazione intelligente ricette
+  - [ ] Suggerimenti difficoltà basati su analisi AI
+  - [ ] Estrazione da immagini ricette (OCR)
+- [ ] Recipe enhancement AI
+  - [ ] Suggerimenti tempi ottimali
+  - [ ] Correzione/normalizzazione ingredienti
+  - [ ] Traduzione ricette
 - [ ] Smart features
   - [ ] Suggerimenti ricette simili
   - [ ] Meal planning AI
+  - [ ] Generazione varianti ricette
 
 ### Future Ideas
 - [ ] Social features
