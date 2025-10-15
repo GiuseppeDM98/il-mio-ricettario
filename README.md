@@ -50,7 +50,8 @@ Un'applicazione web moderna per organizzare, catalogare e condividere le tue ric
 - **Anteprima editabile**: controlla e modifica ogni ricetta prima di salvare
 - **Normalizzazione automatica**: tempi convertiti in minuti, sezioni capitalizzate
 - **Salvataggio selettivo**: scegli quali ricette salvare o salva tutto in batch
-- **API endpoint dedicato**: `/api/extract-recipes` con validazione file (max 10MB)
+- **API endpoint dedicato**: `/api/extract-recipes` con validazione file (max 4.4MB, limite Vercel)
+- **Gestione PDF grandi**: suggerimenti automatici per compressione con servizi esterni (iLovePDF, Adobe Online)
 
 ### 📋 Cotture in Corso (IMPLEMENTATO)
 - **Dashboard dedicata** per visualizzare tutte le preparazioni attive
@@ -218,6 +219,7 @@ Quando richiesto:
 Deploy delle security rules:
 
 ```bash
+# Deploy Firestore rules
 firebase deploy --only firestore:rules
 ```
 
@@ -319,8 +321,8 @@ Dovresti vedere la pagina di login. Crea un account per iniziare!
 ### Estrattore AI di Ricette
 
 1. Vai su "✨ Estrattore AI" dal menu
-2. Carica un file PDF contenente ricette (max 10MB)
-3. Attendi l'analisi (pochi secondi)
+2. Carica un file PDF contenente ricette (max 4.4MB)
+3. L'AI di Claude analizza il PDF ed estrae automaticamente le ricette
 4. Controlla le ricette estratte:
    - Ogni ricetta viene presentata in anteprima
    - Ingredienti organizzati per sezioni
@@ -334,6 +336,13 @@ Dovresti vedere la pagina di login. Crea un account per iniziare!
 - PDF ben strutturati con sezioni chiare
 - Testo selezionabile (non solo immagini scansionate)
 - Ricette con format tradizionale (ingredienti → procedimento)
+- PDF fino a 4.4MB supportati (limite Vercel)
+
+⚠️ **Limite dimensione file**:
+- Se il PDF supera 4.4MB, usa un servizio di compressione gratuito:
+  - [iLovePDF](https://www.ilovepdf.com/it/comprimere_pdf) (consigliato)
+  - Adobe Acrobat Online
+  - Smallpdf
 
 ### Gestire Categorie
 
@@ -491,8 +500,7 @@ il-mio-ricettario/
 │
 ├── firebase/
 │   ├── firestore.rules              # Security rules (userId-based)
-│   ├── firestore.indexes.json       # Query indexes
-│   └── storage.rules                # Storage rules (futuro)
+│   └── firestore.indexes.json       # Query indexes
 │
 ├── public/                          # Static assets
 ├── docs/                            # Design documents
@@ -700,32 +708,33 @@ Vercel rileva automaticamente Next.js e configura:
    - `ANTHROPIC_API_KEY` (per estrattore AI)
 3. Select environments: Production, Preview, Development
 
-⚠️ **IMPORTANTE per Vercel**:
-- `ANTHROPIC_API_KEY` funziona solo con Vercel Pro/Enterprise (per API routes serverless)
-- Piano gratuito: considera alternative come Firebase Functions o backend separato
-
 ---
 
 ## 🤖 Architettura Estrattore AI
 
-### Flusso di Estrazione
+### Flusso di Estrazione (Vercel API Route)
 
 ```
-1. Upload PDF (Frontend)
+1. Selezione PDF (Frontend)
    ↓
-2. Validazione (size, type)
+2. Validazione client-side (size max 4.4MB, type PDF)
    ↓
-3. API Route /api/extract-recipes (Server)
+3. Upload tramite FormData (Frontend → Vercel API Route)
+   │  - POST /api/extract-recipes
+   │  - Content-Type: multipart/form-data
    ↓
-4. Conversione PDF → Base64
+4. API Route (Server-side Next.js)
+   │  a) Validazione (max 4.4MB, tipo PDF)
+   │  b) Conversione PDF → Base64
+   │  c) Chiamata Claude API (Anthropic)
+   │     - Model: claude-sonnet-4-5
+   │     - Max tokens: 16000
+   │     - Native PDF support
+   │     - Prompt strutturato con istruzioni dettagliate
    ↓
-5. Chiamata Claude API (Anthropic)
-   │  - Model: claude-sonnet-4-5
-   │  - Max tokens: 16000
-   │  - Native PDF support
-   │  - Prompt strutturato con istruzioni dettagliate
+5. Risposta Claude (Markdown formattato)
    ↓
-6. Risposta Claude (Markdown formattato)
+6. Return a Frontend con ricette estratte
    ↓
 7. Parsing Markdown → ParsedRecipe[] (recipe-parser.ts)
    │  - Estrazione titoli (# headings)
@@ -740,17 +749,28 @@ Vercel rileva automaticamente Next.js e configura:
 9. Salvataggio selettivo in Firestore
 ```
 
+**Caratteristiche architettura**:
+- ✅ API key Anthropic protetta server-side in API route
+- ✅ Nessun setup aggiuntivo richiesto (oltre a Vercel)
+- ✅ Architettura semplice e diretta
+- ⚠️ Limite body size Vercel: 4.4MB
+- 💡 Per PDF più grandi: usare servizi di compressione esterni (iLovePDF)
+
 ### Componenti Chiave
 
-#### API Route (`src/app/api/extract-recipes/route.ts`)
-- **Responsabilità**: Endpoint server-side per chiamate Claude API
-- **Input**: FormData con file PDF
-- **Output**: JSON con ricette estratte in markdown
+#### API Route ([src/app/api/extract-recipes/route.ts](src/app/api/extract-recipes/route.ts))
+- **Endpoint**: `POST /api/extract-recipes`
+- **Tipo**: Next.js API Route (Server-side)
+- **Input**: FormData con PDF file
+- **Output**: `{ success: boolean, extractedRecipes: string }`
 - **Validazioni**:
+  - Autenticazione (richiesta da client autenticato)
   - File type: `application/pdf`
-  - Max size: 10MB
-  - API key presente
-- **Security**: API key server-side only (no client exposure)
+  - Max size: 4.4MB (limite Vercel body size)
+- **Security**:
+  - API key Anthropic in variabile d'ambiente `ANTHROPIC_API_KEY`
+  - Non esposta nel client (solo server-side)
+  - Validazione lato server
 
 #### Parser (`src/lib/utils/recipe-parser.ts`)
 - **Funzione principale**: `parseExtractedRecipes(markdownText: string): ParsedRecipe[]`
@@ -788,14 +808,19 @@ Vedi codice completo in [`src/app/api/extract-recipes/route.ts`](src/app/api/ext
 - Costo ~$3 per 1M input tokens, $15 per 1M output tokens
 - 1 PDF tipico (10-20 ricette): ~$0.05-0.15
 - Max tokens output: 16000 (configurabile)
+- **Limite file**: 4.4MB (limite Vercel)
 
-**Firebase**:
-- Firestore: Scritture incluse nel piano gratuito fino a 20k/giorno
-- Storage: Non usato per PDF (conversione in-memory)
+**Firebase** (Piano gratuito):
+- **Firestore**:
+  - 20k scritture/giorno gratis
+  - 50k letture/giorno gratis
+  - Stima: gratis per uso personale
 
 **Vercel**:
-- Serverless Functions: Incluse in piano gratuito (100GB-hours/mese)
-- **NOTA**: Piano free potrebbe avere limiti su durata esecuzione API routes
+- Hosting frontend: Gratis
+- API routes: Incluse nel piano gratuito
+
+**Totale stimato per uso moderato**: <$1/mese (principalmente Claude API)
 
 ---
 
@@ -1137,9 +1162,17 @@ npm run dev
 #### 8. PDF troppo grande o estrazione fallita
 ```bash
 # Limiti attuali:
-# - Max dimensione file: 10MB
+# - Max dimensione file: 4.4MB (limite Vercel body size)
 # - Formato supportato: PDF con testo selezionabile
 # - PDF scansionati (solo immagini) potrebbero non funzionare bene
+
+# Se il PDF supera 4.4MB:
+# 1. Usa servizi di compressione gratuiti:
+#    - iLovePDF: https://www.ilovepdf.com/it/comprimere_pdf (consigliato)
+#    - Adobe Acrobat Online
+#    - Smallpdf
+# 2. La compressione solitamente riduce del 30-60% senza perdita qualità
+# 3. Riprova il caricamento dopo la compressione
 
 # Per PDF scansionati, considera di:
 # 1. Usare OCR esterno prima
