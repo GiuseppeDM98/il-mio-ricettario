@@ -71,7 +71,7 @@ Un'applicazione web moderna per organizzare, catalogare e condividere le tue ric
 - Auto-categorizzazione AI delle ricette estratte
 
 ---
-tst
+
 ## 🛠️ Tech Stack
 
 ### Frontend
