@@ -145,8 +145,9 @@ function parseRecipeSection(section: string): ParsedRecipe | null {
             id: uuidv4(),
             order: stepOrder++,
             description,
-            section: currentStepSection || undefined,
+            section: currentStepSection || null,
             sectionOrder: currentSectionOrder,
+            duration: null,
           });
         }
       } else {
@@ -194,7 +195,7 @@ function parseIngredientLine(line: string, section: string | null): Ingredient |
       id: uuidv4(),
       name: parts[0],
       quantity: parts.slice(1).join(', '),
-      section: section || undefined,
+      section: section || null,
     };
   }
 
@@ -207,7 +208,7 @@ function parseIngredientLine(line: string, section: string | null): Ingredient |
       id: uuidv4(),
       name: quantityMatch[1].trim(),
       quantity: quantityMatch[2].trim(),
-      section: section || undefined,
+      section: section || null,
     };
   }
 
@@ -216,7 +217,7 @@ function parseIngredientLine(line: string, section: string | null): Ingredient |
     id: uuidv4(),
     name: line,
     quantity: '',
-    section: section || undefined,
+    section: section || null,
   };
 }
 
