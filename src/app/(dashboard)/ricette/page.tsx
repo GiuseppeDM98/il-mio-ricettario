@@ -32,6 +32,8 @@ export default function RecipesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [selectedSeason, setSelectedSeason] = useState<Season | 'all'>('all');
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('all');
+  const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string>('all');
 
   useEffect(() => {
     const loadCategoriesData = async () => {
@@ -56,13 +58,50 @@ export default function RecipesPage() {
     loadCategoriesData();
   }, [user]);
 
-  // Filter recipes by season
+  // Filter recipes by season, category, and subcategory
   const filteredRecipes = useMemo(() => {
-    if (selectedSeason === 'all') {
-      return recipes;
+    let filtered = recipes;
+
+    // Filter by season
+    if (selectedSeason !== 'all') {
+      filtered = filtered.filter(recipe => recipe.season === selectedSeason);
     }
-    return recipes.filter(recipe => recipe.season === selectedSeason);
-  }, [recipes, selectedSeason]);
+
+    // Filter by category
+    if (selectedCategoryId !== 'all') {
+      filtered = filtered.filter(recipe => recipe.categoryId === selectedCategoryId);
+    }
+
+    // Filter by subcategory
+    if (selectedSubcategoryId !== 'all') {
+      filtered = filtered.filter(recipe => recipe.subcategoryId === selectedSubcategoryId);
+    }
+
+    return filtered;
+  }, [recipes, selectedSeason, selectedCategoryId, selectedSubcategoryId]);
+
+  // Get subcategories for the selected category
+  const availableSubcategories = useMemo(() => {
+    if (selectedCategoryId === 'all') {
+      return subcategories;
+    }
+    return subcategories.filter(sub => sub.categoryId === selectedCategoryId);
+  }, [subcategories, selectedCategoryId]);
+
+  // Reset subcategory when category changes
+  useEffect(() => {
+    if (selectedCategoryId === 'all') {
+      setSelectedSubcategoryId('all');
+    } else {
+      // Check if current subcategory belongs to the new category
+      const currentSubInNewCat = availableSubcategories.some(
+        sub => sub.id === selectedSubcategoryId
+      );
+      if (!currentSubInNewCat) {
+        setSelectedSubcategoryId('all');
+      }
+    }
+  }, [selectedCategoryId, selectedSubcategoryId, availableSubcategories]);
 
   if (loading) {
     return (
@@ -83,6 +122,62 @@ export default function RecipesPage() {
         <Button asChild>
           <Link href="/ricette/new">Crea Ricetta</Link>
         </Button>
+      </div>
+
+      {/* Category and Subcategory Filters */}
+      <div className="mb-6 space-y-4">
+        <div className="flex flex-col sm:flex-row gap-4">
+          {/* Category Dropdown */}
+          <div className="flex-1">
+            <label htmlFor="category-filter" className="block text-sm font-medium text-gray-700 mb-2">
+              Filtra per categoria:
+            </label>
+            <select
+              id="category-filter"
+              value={selectedCategoryId}
+              onChange={(e) => setSelectedCategoryId(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+            >
+              <option value="all">Tutte le categorie ({recipes.length})</option>
+              {categories.map((cat) => {
+                const count = recipes.filter(r => r.categoryId === cat.id).length;
+                return (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.icon} {cat.name} ({count})
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+
+          {/* Subcategory Dropdown */}
+          <div className="flex-1">
+            <label htmlFor="subcategory-filter" className="block text-sm font-medium text-gray-700 mb-2">
+              Filtra per sottocategoria:
+            </label>
+            <select
+              id="subcategory-filter"
+              value={selectedSubcategoryId}
+              onChange={(e) => setSelectedSubcategoryId(e.target.value)}
+              disabled={selectedCategoryId === 'all'}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+            >
+              <option value="all">
+                {selectedCategoryId === 'all'
+                  ? 'Seleziona prima una categoria'
+                  : `Tutte le sottocategorie (${recipes.filter(r => r.categoryId === selectedCategoryId).length})`}
+              </option>
+              {availableSubcategories.map((sub) => {
+                const count = recipes.filter(r => r.subcategoryId === sub.id).length;
+                return (
+                  <option key={sub.id} value={sub.id}>
+                    {sub.name} ({count})
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+        </div>
       </div>
 
       {/* Season Filter */}
