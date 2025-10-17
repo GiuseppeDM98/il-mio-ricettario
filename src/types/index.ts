@@ -22,6 +22,7 @@ export interface Step {
   description: string;
   duration?: number;
   section?: string;
+  sectionOrder?: number;
 }
 
 export interface Recipe {
