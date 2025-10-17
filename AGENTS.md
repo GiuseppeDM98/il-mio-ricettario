@@ -68,27 +68,116 @@ interface Ingredient {
   id: string;
   name: string;
   quantity: string;
-  section?: string;  // Groups ingredients (e.g., "Per la pasta")
+  section?: string | null;  // Groups ingredients (e.g., "Per la pasta")
 }
 ```
 - Form UI uses hierarchical `IngredientSection[]` structure ([recipe-form.tsx](src/components/recipe/recipe-form.tsx:18-22))
 - Conversion: hierarchical → flat happens on submit ([recipe-form.tsx](src/components/recipe/recipe-form.tsx:178-190))
 - Conversion: flat → hierarchical on load ([recipe-form.tsx](src/components/recipe/recipe-form.tsx:107-149))
 
-Similar pattern for `Step.section` to group preparation steps.
+Similar pattern for `Step.section` to group preparation steps:
+```typescript
+interface Step {
+  id: string;
+  order: number;                 // Global step order (1, 2, 3...)
+  description: string;
+  duration?: number | null;
+  section?: string | null;       // Groups steps (e.g., "Per la pasta")
+  sectionOrder?: number;         // Original section order from PDF (preserves document order)
+}
+```
+- **sectionOrder**: Preserves the original order of sections as they appear in the PDF document
+- Sections are displayed in the order they appear in the original document, not alphabetically
+- This ensures the recipe flow matches the original author's intent
+
+Recipes also include AI-powered categorization and seasonality:
+```typescript
+interface Recipe {
+  // ... all fields above
+  season?: 'primavera' | 'estate' | 'autunno' | 'inverno' | 'tutte_stagioni';
+  aiSuggested?: boolean;  // true if category/season were suggested by AI
+  // ...
+}
+```
+- **season**: Italian seasonal classification based on ingredients
+- **aiSuggested**: Indicates if category/season were auto-suggested (for transparency)
 
 ### 4. Firebase Timestamps
 - Use `serverTimestamp()` for all `createdAt`/`updatedAt` fields
 - TypeScript type is `Timestamp` from `firebase/firestore`
 - Never manually create timestamps
 
-### 5. Component Patterns
+### 5. Firebase Optional Fields
+- **IMPORTANT**: Firebase Firestore does NOT accept `undefined` values in documents
+- Always use `null` instead of `undefined` for optional fields
+- This applies to all optional fields in `Ingredient`, `Step`, and other domain models
+- Example:
+  ```typescript
+  // ❌ WRONG - Will cause Firebase error
+  { section: section || undefined }
+
+  // ✅ CORRECT - Firebase compatible
+  { section: section || null }
+  ```
+- When parsing recipes from PDF, the parser automatically uses `null` for empty optional fields
+
+### 6. AI Categorization Pattern
+
+The app implements AI-powered categorization and seasonal classification for recipes extracted from PDFs. This follows a specific architecture pattern:
+
+#### API Separation Pattern
+- **Extraction API** (`/api/extract-recipes`): Handles PDF parsing with Claude AI
+- **Suggestion API** (`/api/suggest-category`): Provides category and season suggestions based on recipe content
+- **Separation rationale**: Independent testing, modification, and caching strategies
+
+#### Italian Seasonal Ingredients Database
+The suggestion API includes a curated database of Italian seasonal ingredients:
+```typescript
+const ITALIAN_SEASONAL_INGREDIENTS = {
+  primavera: ['asparagi', 'carciofi', 'fave', 'piselli', 'fragole', ...],
+  estate: ['pomodori', 'melanzane', 'zucchine', 'peperoni', 'basilico', ...],
+  autunno: ['zucca', 'funghi', 'castagne', 'radicchio', 'cavolo', ...],
+  inverno: ['cavolo nero', 'cavolfiore', 'finocchi', 'agrumi', ...]
+};
+```
+- Ensures culturally accurate seasonality for Italian cuisine
+- No external dependencies required
+
+#### Client-Side Flow
+1. User uploads PDF → Extract recipes
+2. For each extracted recipe → Call AI suggestion endpoint with:
+   - Recipe title
+   - Ingredient list
+   - User's existing categories
+3. AI returns: `{ categoryName, season, isNewCategory }`
+4. Pre-populate form with suggestions (user can modify)
+5. On save: if new category, auto-create with generated icon/color
+
+#### Automatic Category Creation
+See [lib/firebase/categories.ts](src/lib/firebase/categories.ts):
+- `generateColorFromName()`: Hash-based consistent color generation
+- `generateIconFromName()`: Pattern matching for appropriate icons (e.g., "Primi" → 🍝)
+- `createCategoryIfNotExists()`: Checks existence (case-insensitive) or creates new
+
+#### UI Pattern
+- Show "✨ Suggerito da AI" badge when displaying AI suggestions
+- Pre-select suggested values but keep fully editable
+- Default season to "Tutte le stagioni" if undetermined
+- Store `aiSuggested: true` in recipe for transparency
+
+#### Season Display
+- **Recipe cards**: Icon badge in top-right corner (🌸 ☀️ 🍂 ❄️ 🌍)
+- **Recipe detail**: Prominent badge with icon and label
+- **Recipe list**: Filter buttons with seasonal icons and counts
+- **Recipe form**: Iconic button selector for season choice
+
+### 7. Component Patterns
 - **UI components** in `components/ui/`: Button, Input, Card, Dialog, Sheet (Radix-based)
 - **Feature components** in `components/{feature}/`: auth, recipe, layout
 - Use `cn()` utility from [lib/utils/cn.ts](src/lib/utils/cn.ts) for conditional classes
 - Mobile-first: test responsive behavior at breakpoints `sm:`, `md:`, `lg:`
 
-### 6. Styling System
+### 7. Styling System
 - Design tokens via CSS variables in HSL format (see [tailwind.config.ts](tailwind.config.ts:11-54))
 - Primary color: Red theme (#ef4444 variants)
 - Use semantic colors: `bg-primary`, `text-muted-foreground`, `border`
@@ -110,8 +199,15 @@ Similar pattern for `Step.section` to group preparation steps.
 - Enable strict null checks; avoid `any`
 
 ### Import Aliases
-- Use `@/` for all imports: `import { Recipe } from '@/types'`
+- Use `@/` for all imports: `import { Recipe, Season } from '@/types'`
 - Configured in `tsconfig.json` and `jest.config.js`
+- Common imports:
+  ```typescript
+  import { Recipe, Season, Category, Subcategory } from '@/types';
+  import { useAuth } from '@/lib/context/auth-context';
+  import { useRecipes } from '@/lib/hooks/useRecipes';
+  import { SeasonSelector } from '@/components/recipe/season-selector';
+  ```
 
 ### Error Handling
 - Use try-catch in async operations
@@ -143,12 +239,16 @@ Similar pattern for `Step.section` to group preparation steps.
 
 The project follows a 3-phase roadmap (see README.md):
 
-### Phase 1 (MVP - Current)
+### Phase 1 (MVP - Completed)
 - ✅ Auth (Email + Google OAuth)
 - ✅ Recipe CRUD with ingredients/steps
 - ✅ Categories/subcategories
 - ✅ Mobile-responsive UI
 - ✅ Cooking mode (screen wake lock via nosleep.js)
+- ✅ PDF extraction with Claude AI
+- ✅ AI-powered auto-categorization with automatic category creation
+- ✅ Seasonal classification based on Italian ingredients
+- ✅ Season filters in recipe list
 
 ### Phase 2 (Planned)
 - Advanced search & filters
@@ -157,9 +257,9 @@ The project follows a 3-phase roadmap (see README.md):
 - Recipe-technique linking
 
 ### Phase 3 (AI Features)
-- PDF import with Claude AI
-- Auto-categorization
-- Recipe enhancement
+- Recipe enhancement suggestions
+- Smart ingredient substitutions
+- Cooking tips generation
 
 **Important**: When adding features, check which phase they belong to. Don't implement Phase 3 features if Phase 2 dependencies aren't ready.
 

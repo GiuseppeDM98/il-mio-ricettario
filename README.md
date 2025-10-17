@@ -28,6 +28,8 @@ Un'applicazione web moderna per organizzare, catalogare e condividere le tue ric
 - **Step di preparazione**: Passaggi numerati con sezioni opzionali
 - **Metadati ricchi**: Porzioni, tempo di preparazione, tempo di cottura, difficoltà
 - **Categorie personalizzabili**: Sistema di categorie e sottocategorie con emoji e colori
+- **Attributo stagione**: Ogni ricetta può avere una stagione associata con icone intuitive (🌸 ☀️ 🍂 ❄️ 🌍)
+- **Filtri avanzati**: Filtra ricette per stagione nella lista principale con conteggio per stagione
 
 ### 📱 Mobile-First Design
 - Design responsive ottimizzato per smartphone
@@ -47,6 +49,16 @@ Un'applicazione web moderna per organizzare, catalogare e condividere le tue ric
 - **Import automatico da PDF** con Claude AI 4.5 (Anthropic)
 - **Supporto PDF multipagina**: estrae automaticamente TUTTE le ricette presenti nel documento
 - **Parser intelligente** con preservazione struttura originale (sezioni ingredienti/procedimento)
+- **Categorizzazione automatica intelligente**: Claude suggerisce la categoria in base al contenuto
+  - Usa categorie esistenti o propone nuove categorie
+  - Creazione automatica categoria con icona/colore generati
+  - Badge "Suggerito da AI" per trasparenza
+  - Modificabile dall'utente prima del salvataggio
+- **Classificazione stagionale automatica**: AI determina la stagione della ricetta
+  - Database ingredienti stagionali italiani integrato
+  - 5 stagioni supportate: Primavera (🌸), Estate (☀️), Autunno (🍂), Inverno (❄️), Tutte le stagioni (🌍)
+  - Basato su analisi ingredienti specifici italiani
+  - Filtro stagione nella lista ricette con conteggio
 - **Anteprima editabile**: controlla e modifica ogni ricetta prima di salvare
 - **Normalizzazione automatica**: tempi convertiti in minuti, sezioni capitalizzate
 - **Salvataggio selettivo**: scegli quali ricette salvare o salva tutto in batch
@@ -68,7 +80,6 @@ Un'applicazione web moderna per organizzare, catalogare e condividere le tue ric
 - Import ricette da URL (GialloZafferano, etc.)
 - Note tecniche di cucina (dry brining, cottura ibrida, etc.)
 - Collegamenti intelligenti tra tecniche e ricette
-- Auto-categorizzazione AI delle ricette estratte
 
 ---
 
@@ -323,14 +334,19 @@ Dovresti vedere la pagina di login. Crea un account per iniziare!
 1. Vai su "✨ Estrattore AI" dal menu
 2. Carica un file PDF contenente ricette (max 4.4MB)
 3. L'AI di Claude analizza il PDF ed estrae automaticamente le ricette
-4. Controlla le ricette estratte:
-   - Ogni ricetta viene presentata in anteprima
+4. **Per ogni ricetta estratta, l'AI suggerisce:**
+   - **Categoria**: Sceglie tra categorie esistenti o ne propone una nuova
+   - **Stagione**: Determina la stagionalità in base agli ingredienti italiani
+5. Controlla le ricette estratte:
+   - Ogni ricetta mostra i suggerimenti AI con badge "✨ Suggerito da AI"
+   - Categoria modificabile (se nuova, viene creata automaticamente al salvataggio)
+   - Stagione modificabile con selettore icone intuitive (🌸 ☀️ 🍂 ❄️ 🌍)
    - Ingredienti organizzati per sezioni
    - Step di preparazione numerati
    - Metadati (porzioni, tempi) già parsati
-5. Modifica se necessario (opzionale)
-6. Salva singolarmente o tutte in batch
-7. Le ricette vengono aggiunte al tuo ricettario con source type "pdf"
+6. Modifica categoria/stagione se necessario (opzionale)
+7. Salva singolarmente o tutte in batch
+8. Le ricette vengono aggiunte con categoria e stagione al tuo ricettario con source type "pdf"
 
 💡 **Tips per migliori risultati**:
 - PDF ben strutturati con sezioni chiare
@@ -753,6 +769,7 @@ Vercel rileva automaticamente Next.js e configura:
 - ✅ API key Anthropic protetta server-side in API route
 - ✅ Nessun setup aggiuntivo richiesto (oltre a Vercel)
 - ✅ Architettura semplice e diretta
+- ✅ Dati Firebase-compatible: campi opzionali usano `null` invece di `undefined`
 - ⚠️ Limite body size Vercel: 4.4MB
 - 💡 Per PDF più grandi: usare servizi di compressione esterni (iLovePDF)
 
@@ -781,9 +798,12 @@ Vercel rileva automaticamente Next.js e configura:
   - Sezioni procedimento: `## Procedimento (per ...)?`
   - Metadati: `**Porzioni:**`, `**Tempo di preparazione:**`
 - **Normalizzazioni**:
+  - Titoli: conversione da CAPS LOCK a Title Case ("PATATE AL FORNO" → "Patate al forno")
   - Capitalizzazione sezioni ("per la pasta" → "Per la pasta")
   - Parsing tempi ("2 ore 30 min" → 150 minuti)
+  - Tracking `sectionOrder` per preservare ordine originale sezioni dal PDF
   - Generazione UUID per ingredienti/step
+  - Campi opzionali: uso di `null` invece di `undefined` per compatibilità Firebase
 
 #### UI Components
 - **RecipeExtractorUpload**: Drag & drop / file picker per PDF
@@ -821,6 +841,141 @@ Vedi codice completo in [`src/app/api/extract-recipes/route.ts`](src/app/api/ext
 - API routes: Incluse nel piano gratuito
 
 **Totale stimato per uso moderato**: <$1/mese (principalmente Claude API)
+
+---
+
+## 🧠 AI Categorization & Seasonality
+
+### Architettura
+
+Il sistema di categorizzazione e stagionalità AI è completamente integrato nell'estrattore ricette:
+
+```
+PDF Upload
+    ↓
+Estrazione Ricette (Claude)
+    ↓
+Parsing Markdown
+    ↓
+Per ogni ricetta estratta:
+    ↓
+    ├─→ Analisi Titolo
+    ├─→ Analisi Ingredienti
+    ├─→ Categorie Utente Esistenti
+    ↓
+POST /api/suggest-category
+    ↓
+    ├─→ Prompt Engineering
+    │   ├─ Database ingredienti stagionali italiani
+    │   ├─ Categorie esistenti utente
+    │   ├─ Pattern matching categoria-ricetta
+    │   └─ Analisi stagionalità ingredienti
+    ↓
+Response:
+    ├─→ categoryName (esistente o nuova)
+    ├─→ season (primavera|estate|autunno|inverno|tutte_stagioni)
+    └─→ isNewCategory (boolean)
+    ↓
+UI Preview con badge "✨ Suggerito da AI"
+    ↓
+User Override (opzionale)
+    ↓
+Salvataggio:
+    ├─→ createCategoryIfNotExists()
+    │   ├─ Genera icona (pattern matching)
+    │   ├─ Genera colore (hash)
+    │   └─ Crea categoria se nuova
+    └─→ Salva ricetta con aiSuggested: true
+```
+
+### Database Ingredienti Stagionali Italiani
+
+Il sistema utilizza un database curato di ingredienti tipici della cucina italiana, organizzati per stagione:
+
+**Primavera**: asparagi, carciofi, fave, piselli, fragole, agretti, rucola, ravanelli, cipollotti, lattuga
+
+**Estate**: pomodori, melanzane, zucchine, peperoni, basilico, cetrioli, pesche, albicocche, melone, anguria, fagiolini
+
+**Autunno**: zucca, funghi, castagne, radicchio, cavolo, broccoli, uva, pere, mele, fichi
+
+**Inverno**: cavolo nero, cavolfiore, finocchi, agrumi, arance, mandarini, limoni, cime di rapa, porri, rape
+
+### Generazione Automatica Categorie
+
+Quando l'AI suggerisce una categoria non esistente:
+
+1. **Pattern Matching Icone**:
+   - "primi" → 🍝
+   - "dolci" → 🍰
+   - "secondi" → 🥩
+   - "zupp" → 🍲
+   - "pizza" → 🍕
+   - Default → 🍽️
+
+2. **Generazione Colori**:
+   - Hash del nome categoria
+   - Palette predefinita di 10 colori armoniosi
+   - Consistenza: stesso nome = stesso colore
+
+3. **Ordine Automatico**:
+   - Nuove categorie aggiunte in coda
+   - Mantiene ordine categorie esistenti
+
+### UI/UX Features
+
+**Estrattore Ricette**:
+- Badge blu "✨ Suggerito da AI" per trasparenza
+- Categoria editabile con input text
+- Indicatore "Nuova" per categorie da creare
+- Selettore stagione con 5 bottoni iconici
+- Valori pre-compilati dai suggerimenti
+
+**Form Ricette**:
+- SeasonSelector con icone grandi e intuitive
+- Badge "Suggerito da AI" se applicabile
+- Stagione modificabile anche post-creazione
+
+**Lista Ricette**:
+- Filtro stagione con conteggio (es. "☀️ Estate (12)")
+- Badge stagionale icona nell'angolo card
+- Filtro "Tutte" per vedere tutto
+
+**Dettaglio Ricetta**:
+- Badge stagione completo (icona + testo)
+- Stile distintivo per riconoscibilità immediata
+
+### Nuovi Componenti Tecnici
+
+#### API Routes
+- **`/api/suggest-category`** ([src/app/api/suggest-category/route.ts](src/app/api/suggest-category/route.ts)):
+  - Input: `{ recipeTitle, ingredients, userCategories }`
+  - Output: `{ categoryName, season, isNewCategory }`
+  - Database ingredienti stagionali italiani integrato
+  - Prompt engineering ottimizzato per cucina italiana
+
+#### Helper Functions
+- **`createCategoryIfNotExists()`** in [src/lib/firebase/categories.ts](src/lib/firebase/categories.ts):
+  - Verifica esistenza categoria
+  - Se non esiste, crea con icona/colore auto-generati
+  - Icone basate su pattern matching (primi→🍝, dolci→🍰, ecc.)
+  - Colori basati su hash del nome
+  - Ritorna ID categoria (esistente o nuova)
+
+- **`getAISuggestionForRecipe()`** in [src/lib/utils/recipe-parser.ts](src/lib/utils/recipe-parser.ts):
+  - Chiamata API `/suggest-category`
+  - Parsing response JSON
+  - Error handling con graceful degradation
+
+#### UI Components
+- **SeasonSelector** ([src/components/recipe/season-selector.tsx](src/components/recipe/season-selector.tsx)):
+  - 5 bottoni con icone stagionali (❄️ 🌸 ☀️ 🍂 🌍)
+  - Badge "Suggerito da AI" opzionale
+  - Design responsive e mobile-friendly
+
+- **Filtri Stagione** in [src/app/(dashboard)/ricette/page.tsx](src/app/(dashboard)/ricette/page.tsx):
+  - Barra filtri orizzontale con conteggio
+  - Filtro useMemo per performance
+  - Stato selezionato persistente nella sessione
 
 ---
 
@@ -919,6 +1074,8 @@ jest.mock('firebase/firestore', () => ({
   description?: string
   categoryId?: string
   subcategoryId?: string
+  season?: 'primavera' | 'estate' | 'autunno' | 'inverno' | 'tutte_stagioni'  // AI suggested or manual
+  aiSuggested?: boolean          // true se categoria/stagione suggerite da AI
   difficulty?: 'facile' | 'media' | 'difficile'
   tags: string[]
   techniqueIds: string[]         // Phase 2
@@ -928,7 +1085,7 @@ jest.mock('firebase/firestore', () => ({
     name?: string
   }
   ingredients: Ingredient[]      // Array flat con section opzionale
-  steps: Step[]
+  steps: Step[]                  // Con sectionOrder per preservare ordine PDF
   images: string[]               // URLs (Phase 2)
   servings?: number
   prepTime?: number              // minuti
@@ -938,7 +1095,30 @@ jest.mock('firebase/firestore', () => ({
   createdAt: Timestamp
   updatedAt: Timestamp
 }
+
+// Step structure
+interface Step {
+  id: string;
+  order: number;                 // Ordine globale step (1, 2, 3...)
+  description: string;
+  duration?: number | null;
+  section?: string | null;       // Gruppo step (es. "Per la pasta")
+  sectionOrder?: number;         // Ordine originale sezioni da PDF (preserva ordine)
+}
+
+// Ingredient structure
+interface Ingredient {
+  id: string;
+  name: string;
+  quantity: string;
+  section?: string | null;       // Gruppo ingredienti
+}
 ```
+
+**Note**:
+- `sectionOrder` preserva l'ordine originale delle sezioni dal PDF
+- Le sezioni vengono visualizzate nell'ordine in cui appaiono nel documento originale
+- I campi opzionali usano `null` (non `undefined`) per compatibilità Firebase Firestore
 
 #### `categories`
 ```typescript
@@ -1255,6 +1435,9 @@ SOFTWARE.
 - [x] Sistema cotture in corso (sessioni salvate)
 - [x] **Estrattore AI ricette da PDF** (Claude 4.5)
 - [x] Parser intelligente markdown → ricette strutturate
+- [x] **Auto-categorizzazione AI con creazione automatica categorie**
+- [x] **Classificazione stagionale basata su ingredienti italiani**
+- [x] **Filtri stagione con conteggio ricette**
 - [ ] Deploy su Firebase Hosting/Vercel
 
 ### Q2 2025 - Phase 2: Advanced Features
@@ -1274,9 +1457,9 @@ SOFTWARE.
 
 ### Q3 2025 - Phase 3: AI Magic Avanzato
 - [ ] Miglioramenti estrattore AI
-  - [ ] Auto-categorizzazione intelligente ricette
   - [ ] Suggerimenti difficoltà basati su analisi AI
   - [ ] Estrazione da immagini ricette (OCR)
+  - [ ] Miglioramento accuratezza categorizzazione
 - [ ] Recipe enhancement AI
   - [ ] Suggerimenti tempi ottimali
   - [ ] Correzione/normalizzazione ingredienti
