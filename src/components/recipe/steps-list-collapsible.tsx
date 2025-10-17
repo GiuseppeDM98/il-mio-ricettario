@@ -41,11 +41,16 @@ export function StepsListCollapsible({
     groupedSteps.push({ section, steps });
   });
 
-  // Sort: null section first, then alphabetically
+  // Sort: null section first, then by section order (original PDF order)
   groupedSteps.sort((a, b) => {
     if (a.section === null) return -1;
     if (b.section === null) return 1;
-    return a.section.localeCompare(b.section);
+
+    // Get the minimum sectionOrder from each group (all steps in a section should have the same sectionOrder)
+    const orderA = a.steps[0]?.sectionOrder ?? 999;
+    const orderB = b.steps[0]?.sectionOrder ?? 999;
+
+    return orderA - orderB;
   });
 
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
