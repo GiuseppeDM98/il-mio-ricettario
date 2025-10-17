@@ -1,0 +1,122 @@
+import { NextRequest, NextResponse } from 'next/server';
+import Anthropic from '@anthropic-ai/sdk';
+
+const ITALIAN_SEASONAL_INGREDIENTS = {
+  primavera: ['asparagi', 'carciofi', 'fave', 'piselli', 'fragole', 'agretti', 'rucola', 'ravanelli', 'cipollotti', 'lattuga'],
+  estate: ['pomodori', 'melanzane', 'zucchine', 'peperoni', 'basilico', 'cetrioli', 'pesche', 'albicocche', 'melone', 'anguria', 'fagiolini'],
+  autunno: ['zucca', 'funghi', 'castagne', 'radicchio', 'cavolo', 'broccoli', 'uva', 'pere', 'mele', 'fichi'],
+  inverno: ['cavolo nero', 'cavolfiore', 'finocchi', 'agrumi', 'arance', 'mandarini', 'limoni', 'cime di rapa', 'porri', 'rape']
+};
+
+function createCategorizationPrompt(recipeTitle: string, ingredients: string[], userCategories: { name: string }[]): string {
+  const categoryList = userCategories.length > 0
+    ? userCategories.map(c => c.name).join(', ')
+    : 'Nessuna categoria esistente';
+
+  const seasonalInfo = Object.entries(ITALIAN_SEASONAL_INGREDIENTS)
+    .map(([season, items]) => `${season}: ${items.join(', ')}`)
+    .join('\n');
+
+  return `Analizza questa ricetta italiana e fornisci suggerimenti per categoria e stagionalità.
+
+**Ricetta:** ${recipeTitle}
+**Ingredienti principali:** ${ingredients.join(', ')}
+
+**Categorie esistenti dell'utente:** ${categoryList}
+
+**Ingredienti stagionali italiani di riferimento:**
+${seasonalInfo}
+
+**Rispondi SOLO con un JSON in questo formato esatto (senza markdown, senza backticks):**
+{
+  "category": "nome_categoria",
+  "season": "primavera|estate|autunno|inverno|tutte_stagioni",
+  "isNewCategory": true/false
+}
+
+**Regole per la categoria:**
+- Se la ricetta corrisponde a una categoria esistente, usa ESATTAMENTE quel nome
+- Se non corrisponde a nessuna categoria esistente, proponi un nuovo nome appropriato (es: "Primi piatti", "Dolci", "Secondi piatti", "Antipasti", "Contorni", ecc.)
+- Imposta "isNewCategory" a true solo se proponi una categoria nuova
+
+**Regole per la stagione:**
+- Analizza gli ingredienti principali e determina la stagione più appropriata
+- Se la ricetta contiene ingredienti specifici di una stagione, usa quella stagione
+- Se la ricetta usa ingredienti disponibili tutto l'anno o di stagioni diverse, usa "tutte_stagioni"
+- Considera la tradizione culinaria italiana (es: "pasta al forno" è più invernale, "pasta fredda" è estiva)
+
+Rispondi SOLO con il JSON, nient'altro.`;
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: 'API key di Anthropic non configurata' },
+        { status: 500 }
+      );
+    }
+
+    const body = await request.json();
+    const { recipeTitle, ingredients, userCategories } = body;
+
+    if (!recipeTitle || !ingredients) {
+      return NextResponse.json(
+        { error: 'Parametri mancanti: recipeTitle e ingredients sono richiesti' },
+        { status: 400 }
+      );
+    }
+
+    const anthropic = new Anthropic({
+      apiKey: apiKey,
+    });
+
+    const prompt = createCategorizationPrompt(recipeTitle, ingredients, userCategories || []);
+
+    const message = await anthropic.messages.create({
+      model: 'claude-sonnet-4-5',
+      max_tokens: 500,
+      messages: [
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+    });
+
+    const responseText = message.content
+      .filter((block) => block.type === 'text')
+      .map((block) => (block as any).text)
+      .join('\n')
+      .trim();
+
+    // Parse JSON response, removing any potential markdown formatting
+    let jsonText = responseText;
+    if (jsonText.includes('```')) {
+      jsonText = jsonText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    }
+
+    const suggestion = JSON.parse(jsonText);
+
+    return NextResponse.json({
+      success: true,
+      suggestion: {
+        categoryName: suggestion.category,
+        season: suggestion.season,
+        isNewCategory: suggestion.isNewCategory
+      }
+    });
+  } catch (error: any) {
+    console.error('Error getting AI suggestion:', error);
+
+    return NextResponse.json(
+      {
+        error: 'Errore durante il suggerimento AI',
+        details: error.message
+      },
+      { status: 500 }
+    );
+  }
+}

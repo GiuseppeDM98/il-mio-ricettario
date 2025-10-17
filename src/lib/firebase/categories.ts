@@ -165,3 +165,85 @@ export async function deleteSubcategory(subcategoryId: string): Promise<void> {
   const subcategoryRef = doc(db, 'subcategories', subcategoryId);
   await deleteDoc(subcategoryRef);
 }
+
+// Helper function to generate color based on category name
+function generateColorFromName(name: string): string {
+  const colors = [
+    '#FF6B6B', '#4ECDC4', '#95E1D3', '#F38181', '#FFA07A',
+    '#45B7D1', '#F7DC6F', '#BB8FCE', '#F8B739', '#52C41A'
+  ];
+
+  // Simple hash function to get consistent color for same name
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+
+  return colors[Math.abs(hash) % colors.length];
+}
+
+// Helper function to generate icon based on category name
+function generateIconFromName(name: string): string {
+  const iconMap: Record<string, string> = {
+    'primi': '🍝',
+    'secondi': '🥩',
+    'contorni': '🥗',
+    'dolci': '🍰',
+    'antipasti': '🧀',
+    'insalat': '🥗',
+    'zupp': '🍲',
+    'risott': '🍚',
+    'pane': '🥖',
+    'pizza': '🍕',
+    'pasta': '🍝',
+    'carne': '🥩',
+    'pesce': '🐟',
+    'verdur': '🥬',
+    'frutta': '🍎',
+    'bevand': '🥤',
+    'salse': '🥫',
+  };
+
+  const lowerName = name.toLowerCase();
+
+  // Try to match partial name
+  for (const [key, icon] of Object.entries(iconMap)) {
+    if (lowerName.includes(key)) {
+      return icon;
+    }
+  }
+
+  // Default icon
+  return '🍽️';
+}
+
+// Create category if it doesn't exist, otherwise return existing category ID
+export async function createCategoryIfNotExists(
+  userId: string,
+  categoryName: string
+): Promise<string> {
+  // First, check if category already exists
+  const categories = await getUserCategories(userId);
+  const existingCategory = categories.find(
+    cat => cat.name.toLowerCase() === categoryName.toLowerCase()
+  );
+
+  if (existingCategory) {
+    return existingCategory.id;
+  }
+
+  // Category doesn't exist, create it
+  const maxOrder = categories.length > 0
+    ? Math.max(...categories.map(cat => cat.order))
+    : 0;
+
+  const newCategoryId = await createCategory(userId, {
+    name: categoryName,
+    icon: generateIconFromName(categoryName),
+    color: generateColorFromName(categoryName),
+    order: maxOrder + 1,
+    isDefault: false,
+  });
+
+  return newCategoryId;
+}

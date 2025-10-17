@@ -4,15 +4,33 @@ import { useState } from 'react';
 import { ParsedRecipe } from '@/lib/utils/recipe-parser';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ChevronDown, ChevronUp, Check, Clock, Users } from 'lucide-react';
+import { ChevronDown, ChevronUp, Check, Clock, Users, Sparkles } from 'lucide-react';
+import { Season } from '@/types';
+import { Input } from '@/components/ui/input';
 
 interface ExtractedRecipePreviewProps {
   recipe: ParsedRecipe;
   index: number;
-  onSave: (recipe: ParsedRecipe) => void;
+  onSave: (recipe: ParsedRecipe, categoryName: string, season: Season) => void;
   isSaving?: boolean;
   isSaved?: boolean;
 }
+
+const SEASON_ICONS: Record<Season, string> = {
+  primavera: '🌸',
+  estate: '☀️',
+  autunno: '🍂',
+  inverno: '❄️',
+  tutte_stagioni: '🌍'
+};
+
+const SEASON_LABELS: Record<Season, string> = {
+  primavera: 'Primavera',
+  estate: 'Estate',
+  autunno: 'Autunno',
+  inverno: 'Inverno',
+  tutte_stagioni: 'Tutte le stagioni'
+};
 
 export function ExtractedRecipePreview({
   recipe,
@@ -22,6 +40,12 @@ export function ExtractedRecipePreview({
   isSaved,
 }: ExtractedRecipePreviewProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState(
+    recipe.aiSuggestion?.categoryName || ''
+  );
+  const [selectedSeason, setSelectedSeason] = useState<Season>(
+    recipe.aiSuggestion?.season || 'tutte_stagioni'
+  );
 
   // Group ingredients by section
   const ingredientSections = new Map<string, typeof recipe.ingredients>();
@@ -76,6 +100,60 @@ export function ExtractedRecipePreview({
               </div>
             )}
           </div>
+
+          {/* AI Suggestions */}
+          {recipe.aiSuggestion && (
+            <div className="mt-4 space-y-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center gap-2 text-sm font-medium text-blue-900">
+                <Sparkles className="w-4 h-4" />
+                <span>Suggerimenti AI</span>
+              </div>
+
+              {/* Category */}
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  Categoria
+                </label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    className="flex-1"
+                    placeholder="Nome categoria"
+                  />
+                  {recipe.aiSuggestion.isNewCategory && (
+                    <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+                      Nuova
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Season Selector */}
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-2">
+                  Stagione
+                </label>
+                <div className="flex gap-2 flex-wrap">
+                  {(Object.keys(SEASON_ICONS) as Season[]).map((season) => (
+                    <button
+                      key={season}
+                      type="button"
+                      onClick={() => setSelectedSeason(season)}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        selectedSeason === season
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      <span className="mr-1">{SEASON_ICONS[season]}</span>
+                      {SEASON_LABELS[season]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Action Buttons */}
@@ -100,7 +178,7 @@ export function ExtractedRecipePreview({
           </Button>
           <Button
             type="button"
-            onClick={() => onSave(recipe)}
+            onClick={() => onSave(recipe, selectedCategory, selectedSeason)}
             disabled={isSaving || isSaved}
             size="sm"
           >

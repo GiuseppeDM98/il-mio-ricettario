@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Recipe, Ingredient, Step } from '@/types';
+import { Recipe, Ingredient, Step, Season } from '@/types';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { createRecipe, updateRecipe } from '@/lib/firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { v4 as uuidv4 } from 'uuid';
 import { CategorySelector } from './category-selector';
+import { SeasonSelector } from './season-selector';
 
 interface RecipeFormProps {
   recipe?: Recipe; // For edit mode
@@ -34,6 +35,7 @@ export function RecipeForm({ recipe, mode }: RecipeFormProps) {
   const [steps, setSteps] = useState<Step[]>(recipe?.steps || []);
   const [categoryId, setCategoryId] = useState(recipe?.categoryId || '');
   const [subcategoryId, setSubcategoryId] = useState(recipe?.subcategoryId || '');
+  const [season, setSeason] = useState<Season | undefined>(recipe?.season);
   const [loading, setLoading] = useState(false);
 
   // Gestione sezioni ingredienti
@@ -200,6 +202,8 @@ export function RecipeForm({ recipe, mode }: RecipeFormProps) {
         steps,
         categoryId: categoryId || '',
         subcategoryId: subcategoryId || '',
+        season: season,
+        aiSuggested: recipe?.aiSuggested,
         difficulty: recipe?.difficulty || 'facile',
         tags: recipe?.tags || [],
         techniqueIds: recipe?.techniqueIds || [],
@@ -251,6 +255,12 @@ export function RecipeForm({ recipe, mode }: RecipeFormProps) {
         selectedSubcategoryId={subcategoryId}
         onCategoryChange={setCategoryId}
         onSubcategoryChange={setSubcategoryId}
+      />
+
+      <SeasonSelector
+        selectedSeason={season}
+        onSeasonChange={setSeason}
+        aiSuggested={recipe?.aiSuggested}
       />
 
       <div className="grid grid-cols-3 gap-4">
