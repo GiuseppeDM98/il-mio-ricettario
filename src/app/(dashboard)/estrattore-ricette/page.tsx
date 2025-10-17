@@ -1,15 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { RecipeExtractorUpload } from '@/components/recipe/recipe-extractor-upload';
 import { ExtractedRecipePreview } from '@/components/recipe/extracted-recipe-preview';
-import { parseExtractedRecipes, ParsedRecipe } from '@/lib/utils/recipe-parser';
+import { parseExtractedRecipes, ParsedRecipe, getAISuggestionForRecipe } from '@/lib/utils/recipe-parser';
 import { createRecipe } from '@/lib/firebase/firestore';
+import { getUserCategories } from '@/lib/firebase/categories';
+import { createCategoryIfNotExists } from '@/lib/firebase/categories';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, CheckCircle2, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { Category, Season } from '@/types';
 
 export default function RecipeExtractorPage() {
   const router = useRouter();
@@ -20,6 +23,22 @@ export default function RecipeExtractorPage() {
   const [savingStates, setSavingStates] = useState<Map<number, boolean>>(new Map());
   const [savedStates, setSavedStates] = useState<Set<number>>(new Set());
   const [error, setError] = useState<string | null>(null);
+  const [userCategories, setUserCategories] = useState<Category[]>([]);
+
+  // Load user categories on mount
+  useEffect(() => {
+    const loadCategories = async () => {
+      if (user) {
+        try {
+          const categories = await getUserCategories(user.uid);
+          setUserCategories(categories);
+        } catch (error) {
+          console.error('Error loading categories:', error);
+        }
+      }
+    };
+    loadCategories();
+  }, [user]);
 
   const handleFileSelected = async (file: File) => {
     if (!user) {
@@ -36,6 +55,7 @@ export default function RecipeExtractorPage() {
     try {
       const formData = new FormData();
       formData.append('file', file);
+      formData.append('userCategories', JSON.stringify(userCategories.map(c => ({ name: c.name }))));
 
       const response = await fetch('/api/extract-recipes', {
         method: 'POST',
@@ -60,8 +80,25 @@ export default function RecipeExtractorPage() {
         throw new Error('Non è stato possibile estrarre ricette valide dal PDF');
       }
 
-      setExtractedRecipes(parsedRecipes);
-      toast.success(`${parsedRecipes.length} ricett${parsedRecipes.length === 1 ? 'a estratta' : 'e estratte'} con successo!`);
+      // Get AI suggestions for each recipe
+      toast.success(`${parsedRecipes.length} ricett${parsedRecipes.length === 1 ? 'a estratta' : 'e estratte'}! Ottenimento suggerimenti AI...`);
+
+      const recipesWithSuggestions = await Promise.all(
+        parsedRecipes.map(async (recipe) => {
+          const suggestion = await getAISuggestionForRecipe(
+            recipe.title,
+            recipe.ingredients,
+            userCategories.map(c => ({ name: c.name }))
+          );
+          return {
+            ...recipe,
+            aiSuggestion: suggestion || undefined
+          };
+        })
+      );
+
+      setExtractedRecipes(recipesWithSuggestions);
+      toast.success(`Suggerimenti AI pronti!`);
     } catch (err: any) {
       console.error('Error extracting recipes:', err);
       setError(err.message || 'Errore durante l\'estrazione delle ricette');
@@ -71,13 +108,19 @@ export default function RecipeExtractorPage() {
     }
   };
 
-  const handleSaveRecipe = async (recipe: ParsedRecipe, index: number) => {
+  const handleSaveRecipe = async (recipe: ParsedRecipe, categoryName: string, season: Season, index: number) => {
     if (!user) return;
 
     // Set saving state
     setSavingStates(prev => new Map(prev).set(index, true));
 
     try {
+      // Create category if it doesn't exist
+      let categoryId = '';
+      if (categoryName && categoryName.trim()) {
+        categoryId = await createCategoryIfNotExists(user.uid, categoryName.trim());
+      }
+
       const recipeData = {
         title: recipe.title,
         description: '',
@@ -87,8 +130,10 @@ export default function RecipeExtractorPage() {
         totalTime: (recipe.prepTime || 0) + (recipe.cookTime || 0),
         ingredients: recipe.ingredients,
         steps: recipe.steps,
-        categoryId: '',
+        categoryId: categoryId,
         subcategoryId: '',
+        season: season,
+        aiSuggested: recipe.aiSuggestion ? true : false,
         difficulty: 'media' as const,
         tags: [],
         techniqueIds: [],
@@ -105,6 +150,10 @@ export default function RecipeExtractorPage() {
       // Mark as saved
       setSavedStates(prev => new Set(prev).add(index));
       toast.success(`"${recipe.title}" salvata con successo!`);
+
+      // Refresh categories if a new one was created
+      const updatedCategories = await getUserCategories(user.uid);
+      setUserCategories(updatedCategories);
     } catch (error) {
       console.error('Error saving recipe:', error);
       toast.error(`Errore nel salvataggio di "${recipe.title}"`);
@@ -123,7 +172,10 @@ export default function RecipeExtractorPage() {
 
     for (let i = 0; i < extractedRecipes.length; i++) {
       if (!savedStates.has(i)) {
-        await handleSaveRecipe(extractedRecipes[i], i);
+        const recipe = extractedRecipes[i];
+        const categoryName = recipe.aiSuggestion?.categoryName || '';
+        const season = recipe.aiSuggestion?.season || 'tutte_stagioni';
+        await handleSaveRecipe(recipe, categoryName, season, i);
       }
     }
 
@@ -207,7 +259,7 @@ export default function RecipeExtractorPage() {
               key={index}
               recipe={recipe}
               index={index}
-              onSave={(r) => handleSaveRecipe(r, index)}
+              onSave={(r, categoryName, season) => handleSaveRecipe(r, categoryName, season, index)}
               isSaving={savingStates.get(index)}
               isSaved={savedStates.has(index)}
             />

@@ -1,6 +1,6 @@
 'use client';
 
-import { Recipe, Category, Subcategory } from '@/types';
+import { Recipe, Category, Subcategory, Season } from '@/types';
 import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 
@@ -10,6 +10,14 @@ interface RecipeCardProps {
   subcategories?: Subcategory[];
 }
 
+const SEASON_ICONS: Record<Season, string> = {
+  primavera: '🌸',
+  estate: '☀️',
+  autunno: '🍂',
+  inverno: '❄️',
+  tutte_stagioni: '🌍'
+};
+
 export function RecipeCard({ recipe, categories = [], subcategories = [] }: RecipeCardProps) {
   // Find category and subcategory for this recipe
   const category = categories.find(cat => cat.id === recipe.categoryId);
@@ -17,7 +25,14 @@ export function RecipeCard({ recipe, categories = [], subcategories = [] }: Reci
 
   return (
     <Link href={`/ricette/${recipe.id}`}>
-      <Card className="hover:shadow-lg transition-shadow duration-200">
+      <Card className="hover:shadow-lg transition-shadow duration-200 relative">
+        {/* Season Badge */}
+        {recipe.season && (
+          <div className="absolute top-3 right-3 text-2xl" title={recipe.season}>
+            {SEASON_ICONS[recipe.season]}
+          </div>
+        )}
+
         <CardHeader>
           <CardTitle>{recipe.title}</CardTitle>
           <CardDescription>{recipe.description}</CardDescription>

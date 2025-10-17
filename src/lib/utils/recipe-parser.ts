@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { Ingredient, Step } from '@/types';
+import { Ingredient, Step, AISuggestion } from '@/types';
 
 export interface ParsedRecipe {
   title: string;
@@ -9,6 +9,7 @@ export interface ParsedRecipe {
   prepTime?: number;
   cookTime?: number;
   notes?: string;
+  aiSuggestion?: AISuggestion;
 }
 
 /**
@@ -282,4 +283,40 @@ function toTitleCase(text: string): string {
 
   // Capitalize only the first character
   return lower.charAt(0).toUpperCase() + lower.slice(1);
+}
+
+/**
+ * Get AI suggestions for category and season for a recipe
+ */
+export async function getAISuggestionForRecipe(
+  recipeTitle: string,
+  ingredients: Ingredient[],
+  userCategories: { name: string }[]
+): Promise<AISuggestion | null> {
+  try {
+    const ingredientNames = ingredients.map(ing => ing.name).filter(Boolean);
+
+    const response = await fetch('/api/suggest-category', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        recipeTitle,
+        ingredients: ingredientNames,
+        userCategories,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('Error getting AI suggestion:', response.statusText);
+      return null;
+    }
+
+    const data = await response.json();
+    return data.suggestion;
+  } catch (error) {
+    console.error('Error getting AI suggestion:', error);
+    return null;
+  }
 }

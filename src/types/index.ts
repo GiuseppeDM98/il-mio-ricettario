@@ -13,17 +13,19 @@ export interface Ingredient {
   id: string;
   name: string;
   quantity: string;
-  section?: string;
+  section?: string | null;
 }
 
 export interface Step {
   id: string;
   order: number;
   description: string;
-  duration?: number;
-  section?: string;
-  sectionOrder?: number;
+  duration?: number | null;
+  section?: string | null;
+  sectionOrder?: number | null;
 }
+
+export type Season = 'primavera' | 'estate' | 'autunno' | 'inverno' | 'tutte_stagioni';
 
 export interface Recipe {
   id: string;
@@ -32,6 +34,8 @@ export interface Recipe {
   description?: string;
   categoryId?: string;
   subcategoryId?: string;
+  season?: Season;
+  aiSuggested?: boolean; // true se categoria/stagione sono suggerite da AI
   difficulty?: 'facile' | 'media' | 'difficile';
   tags: string[];
   techniqueIds: string[];
@@ -93,4 +97,21 @@ export interface CookingSession {
   checkedSteps: string[];
   startedAt: Timestamp;
   lastUpdatedAt: Timestamp;
+}
+
+export interface AISuggestion {
+  categoryName: string; // Nome della categoria suggerita (può essere una esistente o nuova)
+  season: Season;
+  isNewCategory: boolean; // true se la categoria non esiste ancora
+}
+
+export interface ParsedRecipe {
+  title: string;
+  description?: string;
+  servings?: number;
+  prepTime?: number;
+  cookTime?: number;
+  ingredients: Ingredient[];
+  steps: Step[];
+  aiSuggestion?: AISuggestion; // Suggerimenti dall'AI
 }
