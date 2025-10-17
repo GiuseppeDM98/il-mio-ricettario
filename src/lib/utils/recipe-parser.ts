@@ -47,7 +47,7 @@ function parseRecipeSection(section: string): ParsedRecipe | null {
   const titleMatch = lines[0].match(/^#\s+(.+)$/);
   if (!titleMatch) return null;
 
-  const title = titleMatch[1].trim();
+  const title = toTitleCase(titleMatch[1].trim());
   const ingredients: Ingredient[] = [];
   const steps: Step[] = [];
   let servings: number | undefined;
@@ -59,6 +59,8 @@ function parseRecipeSection(section: string): ParsedRecipe | null {
   let currentIngredientSection: string | null = null;
   let currentStepSection: string | null = null;
   let stepOrder = 1;
+  let sectionOrder = 0;
+  let currentSectionOrder = 0;
 
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i];
@@ -76,7 +78,15 @@ function parseRecipeSection(section: string): ParsedRecipe | null {
       currentSection = 'steps';
       // Extract section name (e.g., "## Procedimento per la genovese" -> "Per la genovese")
       const sectionMatch = line.match(/##\s+Procedimento(?:\s+(per\s+.+))?$/i);
-      currentStepSection = capitalizeSectionName(sectionMatch?.[1] || null);
+      const newStepSection = capitalizeSectionName(sectionMatch?.[1] || null);
+
+      // Track section order: increment when we encounter a new section
+      if (newStepSection !== currentStepSection) {
+        sectionOrder++;
+        currentSectionOrder = sectionOrder;
+      }
+
+      currentStepSection = newStepSection;
       continue;
     }
 
@@ -136,6 +146,7 @@ function parseRecipeSection(section: string): ParsedRecipe | null {
             order: stepOrder++,
             description,
             section: currentStepSection || undefined,
+            sectionOrder: currentSectionOrder,
           });
         }
       } else {
@@ -253,4 +264,21 @@ function capitalizeSectionName(sectionName: string | null): string | null {
   }
 
   return sectionName;
+}
+
+/**
+ * Convert text to Title Case (only first letter capitalized)
+ * Examples:
+ *   "PATATE AL FORNO" → "Patate al forno"
+ *   "BISCOTTI LINZER" → "Biscotti linzer"
+ *   "Sablé ai lamponi" → "Sablé ai lamponi" (unchanged)
+ */
+function toTitleCase(text: string): string {
+  if (!text) return text;
+
+  // Convert to lowercase first
+  const lower = text.toLowerCase();
+
+  // Capitalize only the first character
+  return lower.charAt(0).toUpperCase() + lower.slice(1);
 }
