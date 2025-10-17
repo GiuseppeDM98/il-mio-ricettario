@@ -30,12 +30,14 @@ Un'applicazione web moderna per organizzare, catalogare e condividere le tue ric
 - **Categorie personalizzabili**: Sistema di categorie e sottocategorie con emoji e colori
 - **Attributo stagione**: Ogni ricetta può avere una stagione associata con icone intuitive (🌸 ☀️ 🍂 ❄️ 🌍)
 - **Filtri avanzati**: Filtra ricette per stagione nella lista principale con conteggio per stagione
+- **Filtri combinabili**: Filtra ricette per categoria, sottocategoria e stagione simultaneamente con dropdown intuitivi
 
 ### 📱 Mobile-First Design
 - Design responsive ottimizzato per smartphone
 - Layout adattivo per desktop con sidebar
-- Navigazione mobile con floating button
+- Navigazione mobile con hamburger menu nella header
 - Touch-friendly UI per uso in cucina
+- Animazione di loading durante il caricamento iniziale dell'app
 
 ### 👨‍🍳 Modalità Cooking Avanzata
 - **Schermo sempre acceso** durante la preparazione (via nosleep.js)
@@ -372,6 +374,40 @@ Dovresti vedere la pagina di login. Crea un account per iniziare!
 4. **Modificare/Eliminare**:
    - Usa i button di edit (✏️) o delete (🗑️)
    - ⚠️ Non puoi eliminare categorie default con ricette associate
+
+### Filtrare Ricette
+
+Nella pagina "Le mie ricette" hai a disposizione tre tipi di filtri combinabili:
+
+#### 1. Filtro per Categoria
+- **Dropdown "Filtra per categoria"** con tutte le tue categorie
+- Mostra il conteggio di ricette per ogni categoria
+- Esempio: "🍝 Primi piatti (12)"
+- Seleziona "Tutte le categorie" per rimuovere il filtro
+
+#### 2. Filtro per Sottocategoria
+- **Dropdown "Filtra per sottocategoria"** (disponibile dopo aver selezionato una categoria)
+- Mostra solo le sottocategorie della categoria selezionata
+- Mostra il conteggio di ricette per ogni sottocategoria
+- Si resetta automaticamente quando cambi categoria
+
+#### 3. Filtro per Stagione
+- **Pulsanti stagionali** con icone intuitive:
+  - 🌸 Primavera
+  - ☀️ Estate
+  - 🍂 Autunno
+  - ❄️ Inverno
+  - 🌍 Tutte le stagioni
+- Ogni pulsante mostra il conteggio delle ricette
+- Clicca su "Tutte" per visualizzare tutte le ricette
+
+#### Filtri Combinati
+I tre filtri lavorano insieme:
+- Puoi selezionare una categoria + una stagione per trovare, ad esempio, "Primi piatti estivi"
+- Puoi selezionare categoria + sottocategoria + stagione per ricerche molto specifiche
+- Esempio: "Primi piatti → Pasta → Estate" mostra solo le paste estive
+
+💡 **Tip**: I contatori si aggiornano dinamicamente in base ai filtri attivi, aiutandoti a capire quante ricette corrispondono ai criteri selezionati.
 
 ---
 

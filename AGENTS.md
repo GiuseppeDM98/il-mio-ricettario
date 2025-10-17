@@ -177,7 +177,82 @@ See [lib/firebase/categories.ts](src/lib/firebase/categories.ts):
 - Use `cn()` utility from [lib/utils/cn.ts](src/lib/utils/cn.ts) for conditional classes
 - Mobile-first: test responsive behavior at breakpoints `sm:`, `md:`, `lg:`
 
-### 7. Styling System
+**Mobile optimization best practices**:
+- **Responsive layout**: Use `flex-col` → `sm:flex-row` for mobile-to-desktop transitions
+- **Font scaling**: Use responsive font sizes (e.g., `text-xs` → `sm:text-sm`, `text-lg` → `sm:text-xl`)
+- **Button sizing**: Use `flex-1` on mobile for equal distribution, `sm:flex-none` on desktop for auto-width
+- **Padding/spacing**: Scale padding for different screen sizes (e.g., `p-3` → `sm:p-4`)
+- **Text truncation**: Use `truncate`, `break-words`, `min-w-0` to prevent overflow
+- **Navigation**: Hamburger menu in header on mobile (`md:hidden`), sidebar on desktop (`hidden md:block`)
+
+### 8. Mobile Optimization Patterns
+
+When creating or updating UI components, follow these responsive design patterns used throughout the app:
+
+#### Layout Patterns
+```tsx
+// Vertical on mobile, horizontal on desktop
+<div className="flex flex-col sm:flex-row gap-3">
+
+// Hide on mobile, show on desktop
+<div className="hidden md:block">
+
+// Show on mobile, hide on desktop
+<div className="md:hidden">
+```
+
+#### Button Patterns
+```tsx
+// Equal width on mobile, auto-width on desktop
+<Button className="flex-1 sm:flex-none">
+
+// Full width on mobile, auto on desktop
+<Button className="w-full sm:w-auto">
+
+// Responsive text size
+<Button className="text-xs sm:text-sm">
+```
+
+#### Text Patterns
+```tsx
+// Responsive font sizes
+<h1 className="text-lg sm:text-xl md:text-2xl">
+
+// Prevent text overflow
+<span className="truncate">         // Single line ellipsis
+<span className="break-words">      // Multi-line word break
+<div className="min-w-0">           // Allow flex children to shrink below content size
+```
+
+#### Spacing Patterns
+```tsx
+// Responsive padding
+<div className="p-3 sm:p-4 md:p-6">
+
+// Responsive gap
+<div className="gap-2 sm:gap-4">
+
+// Responsive margin
+<div className="mb-3 sm:mb-4 md:mb-6">
+```
+
+#### Form Patterns
+```tsx
+// Stacked on mobile, side-by-side on desktop
+<div className="flex flex-col sm:flex-row gap-4">
+  <Input className="flex-grow" />
+  <Button className="w-full sm:w-auto" />
+</div>
+```
+
+#### Navigation Patterns
+- **Mobile**: Hamburger menu in header (`<MobileNav />` with `md:hidden`)
+- **Desktop**: Sidebar with `hidden md:block`
+- **Layout**: `flex flex-col` for mobile, `flex flex-row` for desktop split view
+
+**Reference implementation**: See [src/app/(dashboard)/categorie/page.tsx](src/app/(dashboard)/categorie/page.tsx) for comprehensive mobile optimization examples.
+
+### 9. Styling System
 - Design tokens via CSS variables in HSL format (see [tailwind.config.ts](tailwind.config.ts:11-54))
 - Primary color: Red theme (#ef4444 variants)
 - Use semantic colors: `bg-primary`, `text-muted-foreground`, `border`
@@ -243,12 +318,15 @@ The project follows a 3-phase roadmap (see README.md):
 - ✅ Auth (Email + Google OAuth)
 - ✅ Recipe CRUD with ingredients/steps
 - ✅ Categories/subcategories
-- ✅ Mobile-responsive UI
+- ✅ Mobile-responsive UI with optimized category management
 - ✅ Cooking mode (screen wake lock via nosleep.js)
 - ✅ PDF extraction with Claude AI
 - ✅ AI-powered auto-categorization with automatic category creation
 - ✅ Seasonal classification based on Italian ingredients
 - ✅ Season filters in recipe list
+- ✅ Combined filters (category + subcategory + season)
+- ✅ App loading animation with spinner
+- ✅ Hamburger menu navigation in header (mobile)
 
 ### Phase 2 (Planned)
 - Advanced search & filters

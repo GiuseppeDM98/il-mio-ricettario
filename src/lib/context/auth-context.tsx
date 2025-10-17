@@ -15,6 +15,7 @@ import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/config';
 import { User } from '@/types';
 import { initializeDefaultCategories } from '../firebase/categories';
+import { Spinner } from '@/components/ui/spinner';
 
 interface AuthContextType {
   user: User | null;
@@ -104,6 +105,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signInWithGoogle,
     signOut,
   };
+
+  // Show loading overlay during initial auth check
+  if (loading) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-white">
+        <div className="flex flex-col items-center gap-4">
+          <Spinner size="lg" />
+          <p className="text-sm text-gray-600">Caricamento...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <AuthContext.Provider value={value}>

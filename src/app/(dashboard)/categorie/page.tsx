@@ -207,11 +207,11 @@ export default function GestioneCategoriePage() {
       </div>
 
       {/* Create Form */}
-      <Card className="mb-6 p-6">
-        <h2 className="text-xl font-semibold mb-4">Crea Nuova Categoria</h2>
+      <Card className="mb-6 p-4 sm:p-6">
+        <h2 className="text-lg sm:text-xl font-semibold mb-4">Crea Nuova Categoria</h2>
         <form onSubmit={handleCreateCategory}>
-          <div className="flex flex-wrap gap-4 items-end">
-            <div className="flex-grow min-w-[200px]">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-4 sm:items-end">
+            <div className="flex-grow sm:min-w-[200px]">
               <label className="block text-sm font-medium mb-2">Nome</label>
               <Input
                 type="text"
@@ -221,24 +221,26 @@ export default function GestioneCategoriePage() {
                 required
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Icona</label>
-              <EmojiPicker
-                value={newCategoryIcon}
-                onSelect={setNewCategoryIcon}
-                className="w-20 h-10"
-              />
+            <div className="flex gap-4">
+              <div className="flex-1 sm:flex-none">
+                <label className="block text-sm font-medium mb-2">Icona</label>
+                <EmojiPicker
+                  value={newCategoryIcon}
+                  onSelect={setNewCategoryIcon}
+                  className="w-full sm:w-20 h-10"
+                />
+              </div>
+              <div className="flex-1 sm:flex-none sm:w-32">
+                <label className="block text-sm font-medium mb-2">Colore</label>
+                <Input
+                  type="color"
+                  value={newCategoryColor}
+                  onChange={(e) => setNewCategoryColor(e.target.value)}
+                  className="h-10 cursor-pointer w-full"
+                />
+              </div>
             </div>
-            <div className="w-32">
-              <label className="block text-sm font-medium mb-2">Colore</label>
-              <Input
-                type="color"
-                value={newCategoryColor}
-                onChange={(e) => setNewCategoryColor(e.target.value)}
-                className="h-10 cursor-pointer"
-              />
-            </div>
-            <Button type="submit" size="lg">Crea Categoria</Button>
+            <Button type="submit" size="lg" className="w-full sm:w-auto">Crea Categoria</Button>
           </div>
         </form>
       </Card>
@@ -252,27 +254,28 @@ export default function GestioneCategoriePage() {
         <div className="space-y-3">
           {categories.map((cat) => (
             <Card key={cat.id} className="overflow-hidden">
-              <div className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3 flex-grow">
+              <div className="p-3 sm:p-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div className="flex items-center gap-3 flex-grow min-w-0">
                     <span
-                      className="text-3xl w-12 h-12 flex items-center justify-center rounded-lg"
+                      className="text-2xl sm:text-3xl w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-lg flex-shrink-0"
                       style={{ backgroundColor: `${cat.color}20`, color: cat.color }}
                     >
                       {cat.icon || '●'}
                     </span>
-                    <div className="flex-grow">
-                      <h3 className="font-semibold text-lg">{cat.name}</h3>
-                      <p className="text-sm text-gray-500">
-                        {cat.isDefault ? 'Categoria predefinita' : 'Categoria personalizzata'}
+                    <div className="flex-grow min-w-0">
+                      <h3 className="font-semibold text-base sm:text-lg truncate">{cat.name}</h3>
+                      <p className="text-xs sm:text-sm text-gray-500">
+                        {cat.isDefault ? 'Predefinita' : 'Personalizzata'}
                       </p>
                     </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap sm:flex-nowrap">
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => toggleCategory(cat.id)}
+                      className="flex-1 sm:flex-none text-xs sm:text-sm"
                     >
                       {expandedCategoryId === cat.id ? 'Chiudi' : 'Sottocategorie'}
                     </Button>
@@ -280,6 +283,7 @@ export default function GestioneCategoriePage() {
                       size="sm"
                       variant="outline"
                       onClick={() => setEditingCategory(cat)}
+                      className="flex-1 sm:flex-none text-xs sm:text-sm"
                     >
                       Modifica
                     </Button>
@@ -288,6 +292,7 @@ export default function GestioneCategoriePage() {
                         size="sm"
                         variant="destructive"
                         onClick={() => handleOpenDeleteDialog(cat)}
+                        className="flex-1 sm:flex-none text-xs sm:text-sm"
                       >
                         Elimina
                       </Button>
@@ -297,19 +302,20 @@ export default function GestioneCategoriePage() {
 
                 {/* Subcategories Section */}
                 {expandedCategoryId === cat.id && (
-                  <div className="mt-4 pt-4 border-t">
+                  <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t">
                     <div className="mb-3">
-                      <h4 className="font-medium mb-2">Sottocategorie</h4>
+                      <h4 className="font-medium mb-2 text-sm sm:text-base">Sottocategorie</h4>
                       {subcategories[cat.id]?.length > 0 ? (
-                        <div className="space-y-1">
+                        <div className="space-y-2">
                           {subcategories[cat.id].map((sub) => (
-                            <div key={sub.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                              <span className="flex-grow">{sub.name}</span>
+                            <div key={sub.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-2 bg-gray-50 rounded">
+                              <span className="flex-grow min-w-0 text-sm sm:text-base break-words">{sub.name}</span>
                               <div className="flex gap-2">
                                 <Button
                                   size="sm"
                                   variant="outline"
                                   onClick={() => setEditingSubcategory(sub)}
+                                  className="flex-1 sm:flex-none text-xs sm:text-sm"
                                 >
                                   Modifica
                                 </Button>
@@ -317,6 +323,7 @@ export default function GestioneCategoriePage() {
                                   size="sm"
                                   variant="destructive"
                                   onClick={() => setDeletingSubcategory(sub)}
+                                  className="flex-1 sm:flex-none text-xs sm:text-sm"
                                 >
                                   Elimina
                                 </Button>
@@ -325,11 +332,11 @@ export default function GestioneCategoriePage() {
                           ))}
                         </div>
                       ) : (
-                        <p className="text-sm text-gray-500">Nessuna sottocategoria</p>
+                        <p className="text-xs sm:text-sm text-gray-500">Nessuna sottocategoria</p>
                       )}
                     </div>
                     {addingSubcategoryTo === cat.id ? (
-                      <form onSubmit={handleAddSubcategory} className="flex gap-2">
+                      <form onSubmit={handleAddSubcategory} className="flex flex-col sm:flex-row gap-2">
                         <Input
                           type="text"
                           value={newSubcategoryName}
@@ -338,24 +345,30 @@ export default function GestioneCategoriePage() {
                           required
                           className="flex-grow"
                         />
-                        <Button type="submit" size="sm">Aggiungi</Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            setAddingSubcategoryTo(null);
-                            setNewSubcategoryName('');
-                          }}
-                        >
-                          Annulla
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button type="submit" size="sm" className="flex-1 sm:flex-none text-xs sm:text-sm">
+                            Aggiungi
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setAddingSubcategoryTo(null);
+                              setNewSubcategoryName('');
+                            }}
+                            className="flex-1 sm:flex-none text-xs sm:text-sm"
+                          >
+                            Annulla
+                          </Button>
+                        </div>
                       </form>
                     ) : (
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() => setAddingSubcategoryTo(cat.id)}
+                        className="w-full sm:w-auto text-xs sm:text-sm"
                       >
                         + Aggiungi Sottocategoria
                       </Button>
