@@ -32,6 +32,8 @@ Un'applicazione web moderna per organizzare, catalogare e condividere le tue ric
 - **Filtri avanzati**: Filtra ricette per stagione nella lista principale con conteggio per stagione
 - **Filtri combinabili**: Filtra ricette per categoria, sottocategoria e stagione simultaneamente con dropdown intuitivi
 
+Update
+
 ### 📱 Mobile-First Design
 - Design responsive ottimizzato per smartphone
 - Layout adattivo per desktop con sidebar
