@@ -91,7 +91,9 @@ const EXTRACTION_PROMPT = `Analizza il PDF allegato ed estrai **TUTTE le ricette
 
 ### 7. NOTE E SUGGERIMENTI
 - Includi tutte le "NOTA BENE", suggerimenti, varianti o consigli
-- Riporta eventuali informazioni su attrezzature necessarie
+- IMPORTANTE: Le attrezzature necessarie (es: planetaria, fruste elettriche, carta da forno, stampi, ecc.) devono essere riportate SOLO nella sezione "Note aggiuntive" con il prefisso "Attrezzature necessarie:"
+- NON includere MAI le attrezzature come step del procedimento
+- Le attrezzature sono strumenti/utensili, NON sono azioni da eseguire
 
 ### 8. INFORMAZIONI FINALI
 - Per ogni ricetta riporta: porzioni, tempi di preparazione e cottura (se presenti)

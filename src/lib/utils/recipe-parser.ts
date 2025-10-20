@@ -167,14 +167,20 @@ function parseRecipeSection(section: string): ParsedRecipe | null {
     }
   }
 
+  // Extract equipment from steps and move to notes
+  const { cleanedSteps, updatedNotes } = extractEquipmentFromSteps(
+    steps,
+    notes.trim()
+  );
+
   return {
     title,
     ingredients,
-    steps,
+    steps: cleanedSteps,
     servings,
     prepTime,
     cookTime,
-    notes: notes.trim() || undefined,
+    notes: updatedNotes || undefined,
   };
 }
 
@@ -283,6 +289,74 @@ function toTitleCase(text: string): string {
 
   // Capitalize only the first character
   return lower.charAt(0).toUpperCase() + lower.slice(1);
+}
+
+/**
+ * Extract equipment information from steps and move to notes
+ * Looks for "Attrezzature:" or "Attrezzature necessarie:" in step descriptions and extracts them
+ */
+function extractEquipmentFromSteps(
+  steps: Step[],
+  currentNotes: string
+): { cleanedSteps: Step[]; updatedNotes: string } {
+  const allEquipment: string[] = [];
+  const cleanedSteps: Step[] = [];
+
+  for (const step of steps) {
+    // Look for "Attrezzature:" or "Attrezzature necessarie:" pattern (case-insensitive)
+    const match = step.description.match(/\s*Attrezzature(?:\s+necessarie)?:\s*(.+)/i);
+
+    if (match) {
+      // Extract the equipment list (everything after the colon)
+      const equipmentList = match[1].trim();
+
+      // Split by comma and/or "e" to separate individual equipment items
+      const equipmentItems = equipmentList
+        .split(/,|\se\s/)
+        .map(item => item.trim())
+        .filter(item => item.length > 0);
+
+      allEquipment.push(...equipmentItems);
+
+      // Clean the step by removing the equipment part
+      const cleanedDescription = step.description
+        .substring(0, step.description.toLowerCase().search(/attrezzature(?:\s+necessarie)?:/))
+        .trim();
+
+      // Only keep the step if there's actual content left
+      if (cleanedDescription.length > 10) {
+        cleanedSteps.push({
+          ...step,
+          description: cleanedDescription,
+        });
+      }
+      // If the step is too short after cleaning, it means it was only equipment
+      // so we don't add it to cleanedSteps
+    } else {
+      // No equipment found in this step, keep it as is
+      cleanedSteps.push(step);
+    }
+  }
+
+  // Recalculate order for remaining steps
+  cleanedSteps.forEach((step, index) => {
+    step.order = index + 1;
+  });
+
+  // Add equipment to notes if any were found
+  let updatedNotes = currentNotes;
+  if (allEquipment.length > 0) {
+    const equipmentSection = 'Attrezzature necessarie:\n' +
+      allEquipment.map(item => `- ${item}`).join('\n');
+    updatedNotes = currentNotes
+      ? `${currentNotes}\n\n${equipmentSection}`
+      : equipmentSection;
+  }
+
+  return {
+    cleanedSteps,
+    updatedNotes,
+  };
 }
 
 /**
