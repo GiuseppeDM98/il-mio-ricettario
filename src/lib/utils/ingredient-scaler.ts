@@ -7,17 +7,17 @@
  *
  * Features:
  * - Normalizes Italian decimal format ("1, 5 kg" → "1,5 kg")
- * - Handles fractions with Unicode symbols ("1/2" → "½", "1.5" → "1 ½")
+ * - Always uses decimal notation with comma separator (never fractions)
  * - Supports ranges ("2-3" → "4-6")
  * - Preserves non-scalable quantities ("q.b." remains unchanged)
- * - Uses Italian decimal notation (comma as separator)
- * - Clear spacing between numbers and fractions for readability
+ * - Clean, consistent Italian number formatting
  *
  * Examples:
  *   scaleQuantity("200 g", 4, 2) → "100 g"
  *   scaleQuantity("1/2 tazza", 2, 4) → "1 tazza"
  *   scaleQuantity("1,5 kg", 4, 6) → "2,25 kg"
  *   scaleQuantity("1, 5 kg", 4, 6) → "2,25 kg" (handles extra spaces)
+ *   scaleQuantity("3 l", 4, 5) → "3,75 l" (clear decimal format)
  *   scaleQuantity("2-3 cucchiai", 4, 8) → "4-6 cucchiai"
  *   scaleQuantity("q.b.", 4, 2) → "q.b." (unchanged)
  *
@@ -106,41 +106,10 @@ function scaleNumericQuantity(quantity: string, scaleFactor: number): string {
 
 /**
  * Format a scaled number with its unit
- * Uses clear decimal notation or Unicode fractions when appropriate
+ * Always uses decimal notation with Italian comma separator
  */
 function formatScaledNumber(value: number, unit: string): string {
-  // Common fractions with Unicode symbols for better readability
-  const unicodeFractions = [
-    { value: 0.25, display: '¼' },
-    { value: 0.33, display: '⅓' },
-    { value: 0.5, display: '½' },
-    { value: 0.66, display: '⅔' },
-    { value: 0.75, display: '¾' },
-  ];
-
-  // Check if value is exactly a simple fraction (less than 1)
-  if (value < 1) {
-    for (const fraction of unicodeFractions) {
-      if (Math.abs(value - fraction.value) < 0.05) {
-        return `${fraction.display}${unit ? ' ' + unit : ''}`;
-      }
-    }
-  }
-
-  // Check for whole number + fraction (e.g., 1.5 → "1 ½")
-  const whole = Math.floor(value);
-  const decimal = value - whole;
-
-  if (whole > 0 && decimal > 0.05) {
-    for (const fraction of unicodeFractions) {
-      if (Math.abs(decimal - fraction.value) < 0.05) {
-        // Add space between whole number and fraction for better readability
-        return `${whole} ${fraction.display}${unit ? ' ' + unit : ''}`;
-      }
-    }
-  }
-
-  // Otherwise format as decimal with comma (Italian format)
+  // Always format as decimal with comma (Italian format)
   return formatNumber(value) + (unit ? ' ' + unit : '');
 }
 
