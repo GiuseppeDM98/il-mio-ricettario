@@ -93,6 +93,7 @@ export interface CookingSession {
   id: string;
   recipeId: string;
   userId: string;
+  servings?: number; // Number of servings being cooked (for quantity scaling)
   checkedIngredients: string[];
   checkedSteps: string[];
   startedAt: Timestamp;
