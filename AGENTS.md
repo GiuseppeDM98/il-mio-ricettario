@@ -1,10 +1,14 @@
 # AI Agent Guidelines for Il Mio Ricettario
 
-This document provides instructions for AI agents working on this codebase. Follow these principles when proposing new code or modifying existing code.
+This document provides instructions for AI agents working on **Il Mio Ricettario**, a Next.js 14 recipe management app with Firebase backend and AI-powered features (Claude 4.5 for PDF extraction). Follow these principles when proposing new code or modifying existing code.
+
+**Last Updated:** 2025-12-28
+
+---
 
 ## Project Overview
 
-**Il Mio Ricettario** is a Next.js 14 recipe management app using Firebase backend, designed as a mobile-first, text-focused digital cookbook.
+**Il Mio Ricettario** is a modern, intelligent digital recipe book web application built with Next.js 14 and Firebase. It provides users with a private, organized space to manage their cooking recipes with advanced AI-powered features.
 
 ### Tech Stack
 - **Frontend**: Next.js 14 (App Router), React 18, TypeScript 5
@@ -365,26 +369,38 @@ From README.md:
 
 ### SOLID Principles
 - **Single Responsibility Principle**: Each class/function should have one clear purpose
+  - ✅ Example: `createCategoryIfNotExists()` does exactly what its name says - checks and creates
+  - ✅ Example: Each Firebase service file handles one domain (recipes, categories, auth)
 - **Open/Closed Principle**: Code should be open for extension but closed for modification
+  - ✅ Example: Helper functions `generateIconFromName()`, `generateColorFromName()` allow extending icon/color mapping without modifying core logic
 - **Liskov Substitution Principle**: Subtypes must be substitutable for their base types
+  - Not heavily applicable in this codebase (limited inheritance)
 - **Interface Segregation Principle**: Keep interfaces focused and minimal
+  - ✅ Example: `Ingredient`, `Step`, `Category` interfaces are minimal and focused
 - **Dependency Inversion Principle**: Depend on abstractions, not concretions
+  - ✅ Example: Firebase service layer abstracts Firestore operations from UI components
 
 ### DRY (Don't Repeat Yourself)
 - Avoid code duplication
 - Extract common logic into reusable functions or modules
 - Use abstraction to eliminate redundancy
+- ✅ Example: CRUD patterns in Firebase services reuse consistent patterns
+- ✅ Example: `createCategoryIfNotExists()` prevents duplicating category existence checks
 
 ### Compact Functions
 - Keep functions short and focused on a single task
 - A function should do one thing and do it well
 - If a function becomes too long, consider breaking it into smaller functions
+- ✅ Example: Most functions in this codebase are 10-30 lines
+- ⚠️ Exception: `parseRecipeSection()` is ~150 lines but well-sectioned with comments
 
 ### Error Handling
 - Implement robust and informative error handling
 - Provide meaningful error messages
 - Handle edge cases and unexpected inputs gracefully
 - Use appropriate error handling mechanisms for the language
+- ✅ Example: Parser continues with next recipe if one fails (graceful degradation)
+- ⚠️ Current implementation uses basic `console.error()` - could be enhanced with structured error types
 
 ### Testing
 - Provide unit tests for new features
@@ -406,6 +422,14 @@ From README.md:
 
 Comments are essential for reducing the reader's cognitive load and explaining information that is not obvious from the code itself. Use comments strategically to make the codebase more accessible and maintainable.
 
+### Project Comment Style
+
+This codebase uses three primary comment patterns:
+
+1. **JSDoc-style function headers** (`/** */`) for public functions with examples
+2. **Guide comments** (`//`) to separate logical sections
+3. **Inline explanations** (`//`) for complex logic within functions
+
 ### Recommended Comment Types
 
 #### 1. Function Comments
@@ -418,16 +442,32 @@ Document the interface of functions, classes, and modules.
 
 **Placement:** At the beginning of functions, classes, or macros
 
-**Example:**
-```c
-/* 
- * Seek the greatest key in the subtree.
- * Return 0 on out of memory, otherwise 1.
+**Example from this codebase:**
+```typescript
+/**
+ * Parse ingredient line into structured format
  */
-int findMaxKey(Node* root) {
-    // implementation
+function parseIngredientLine(line: string, section: string | null): Ingredient | null {
+  // implementation
+}
+
+/**
+ * Convert text to Title Case (only first letter capitalized)
+ * Examples:
+ *   "PATATE AL FORNO" → "Patate al forno"
+ *   "BISCOTTI LINZER" → "Biscotti linzer"
+ *   "Sablé ai lamponi" → "Sablé ai lamponi" (unchanged)
+ */
+function toTitleCase(text: string): string {
+  // implementation
 }
 ```
+
+**When to use:**
+- All exported/public functions
+- Complex utility functions
+- Functions with non-obvious behavior
+- Include examples for data transformation functions
 
 #### 2. Design Comments
 Explain high-level architecture and design decisions.
@@ -440,20 +480,19 @@ Explain high-level architecture and design decisions.
 
 **Placement:** Usually at the beginning of files or major sections
 
-**Example:**
-```python
-"""
-This module implements a B-tree index for fast lookups.
-
-We chose a B-tree over a hash table because:
-1. We need ordered iteration
-2. Range queries are common in our use case
-3. Memory usage is more predictable
-
-The implementation uses a branching factor of 64 to optimize
-for cache line size on modern CPUs.
-"""
+**Example from this codebase:**
+```typescript
+// Default categories to create for new users
+export const DEFAULT_CATEGORIES = [
+  { name: 'Primi piatti', icon: '🍝', color: '#FF6B6B', order: 1 },
+  // ...
+];
 ```
+
+**When to use:**
+- Top of service files explaining the module's purpose
+- Before complex algorithms or data structures
+- When documenting Firebase-specific patterns
 
 #### 3. Why Comments
 Explain the reasoning behind non-obvious code.
@@ -464,14 +503,24 @@ Explain the reasoning behind non-obvious code.
 - Document business logic or domain-specific requirements
 - Clarify decisions that might seem strange or counterintuitive
 
-**Example:**
-```javascript
-// We must flush the buffer before closing the connection
-// because the remote server has a 2-second timeout and
-// large payloads can take longer to transmit
-flushBuffer();
-closeConnection();
+**Example from this codebase:**
+```typescript
+// Return null if the recipe doesn't exist or the user is not the owner
+if (!recipeSnap.exists() || recipeSnap.data().userId !== userId) {
+  return null;
+}
+
+// User document created automatically by onAuthStateChanged
+const signUp = async (email: string, password: string, displayName: string) => {
+  const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+  await updateProfile(userCredential.user, { displayName });
+};
 ```
+
+**When to use:**
+- Explaining ownership checks in Firebase queries
+- Documenting Firebase-specific behaviors (serverTimestamp, null vs undefined)
+- Clarifying Italian culinary domain logic (seasonal ingredients, section naming)
 
 #### 4. Teacher Comments
 Educate readers about domain concepts.
@@ -482,19 +531,21 @@ Educate readers about domain concepts.
 - Explain specialized terminology or techniques
 - Provide references to external resources
 
-**Example:**
-```java
-/*
- * This implements the Luhn algorithm (modulo 10) for credit card validation.
- * The algorithm works by:
- * 1. Starting from the rightmost digit, double every second digit
- * 2. If doubling results in a number > 9, subtract 9
- * 3. Sum all the digits
- * 4. If the sum is divisible by 10, the number is valid
- * 
- * Reference: https://en.wikipedia.org/wiki/Luhn_algorithm
- */
+**Example (could be added to this codebase):**
+```typescript
+// Simple hash function to get consistent color for same name
+// Uses character codes to generate a deterministic hash, ensuring
+// the same category name always gets the same color
+let hash = 0;
+for (let i = 0; i < name.length; i++) {
+  hash = name.charCodeAt(i) + ((hash << 5) - hash);
+}
 ```
+
+**When to use:**
+- Explaining Italian culinary terminology
+- Documenting seasonal ingredient classification logic
+- Clarifying PDF parsing patterns
 
 #### 5. Guide Comments
 Help readers navigate and understand code structure.
@@ -505,18 +556,28 @@ Help readers navigate and understand code structure.
 - Introduce major sections or logical blocks
 - Act as "chapter headings" for code
 
-**Example:**
-```c
-/* Initialize connection pool */
-connectionPool = createPool(config);
+**Example from this codebase:**
+```typescript
+// Create a new recipe
+export async function createRecipe(...) { }
 
-/* Register event handlers */
-registerOnConnect(handleConnect);
-registerOnError(handleError);
+// Get single recipe, ensuring ownership
+export async function getRecipe(...) { }
 
-/* Free the query buffer */
-freeBuffer(queryBuffer);
+// Get all recipes for a user
+export async function getUserRecipes(...) { }
+
+// Update recipe
+export async function updateRecipe(...) { }
+
+// Delete recipe
+export async function deleteRecipe(...) { }
 ```
+
+**When to use:**
+- Separating CRUD operations in service files
+- Dividing sections in complex parsing logic
+- Organizing related functions (e.g., "Subcategories" section)
 
 #### 6. Checklist Comments
 Remind developers of necessary updates.
@@ -528,13 +589,14 @@ Remind developers of necessary updates.
 
 **Example:**
 ```typescript
-// Warning: if you add a type here, update getTypeNameByID() in utils.ts
-enum DataType {
-    STRING,
-    NUMBER,
-    BOOLEAN
-}
+// Warning: if you add a season type here, update SeasonSelector component
+export type Season = 'primavera' | 'estate' | 'autunno' | 'inverno' | 'tutte_stagioni';
 ```
+
+**When to use:**
+- Type definitions that affect multiple components
+- Constants that require UI updates (e.g., adding new categories)
+- Firebase schema changes that affect security rules
 
 ---
 
@@ -544,9 +606,9 @@ enum DataType {
 Comments that require more cognitive effort than the code itself.
 
 **Bad Example:**
-```python
-# Increment i
-i += 1
+```typescript
+// Increment order
+stepOrder++;
 ```
 
 **Why to avoid:** The code is already self-explanatory. The comment adds no value and creates maintenance burden.
@@ -564,11 +626,13 @@ TODO, FIXME, XXX comments should be minimized.
 - Add a date and author
 - Be specific about what needs to be done
 
+**✅ Good news**: This codebase has ZERO TODO/FIXME comments - keep it that way!
+
 #### Backup Comments
 Never leave old versions of code commented out.
 
 **Bad Example:**
-```java
+```typescript
 // Old implementation
 // return calculateTotal(items, tax);
 
@@ -580,6 +644,8 @@ return calculateTotalWithDiscount(items, tax, discount);
 - Use version control instead
 - Commented code creates confusion
 - It clutters the codebase
+
+**✅ Good news**: This codebase has no commented-out code - excellent!
 
 ---
 
