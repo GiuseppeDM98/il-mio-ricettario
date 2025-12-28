@@ -88,11 +88,12 @@ No image uploads, no social features (Phase 1). Just pure recipe management with
 
 ### Key Utilities
 
-| Package | Purpose |
-|---------|---------|
+| Package/Utility | Purpose |
+|-----------------|---------|
 | `uuid` | ID generation for ingredients/steps |
 | `nosleep.js` | Screen wake lock for cooking mode |
 | `@anthropic-ai/sdk` | Claude API integration |
+| `ingredient-scaler.ts` | Client-side ingredient quantity scaling based on servings |
 
 ### Configuration Files
 
@@ -154,6 +155,7 @@ il-mio-ricettario/
 src/app/
 ├── layout.tsx                # Root layout (AuthProvider)
 ├── page.tsx                  # Homepage (redirects to /ricette)
+├── icon.svg                  # Favicon (book + fork design, auto-served by Next.js)
 │
 ├── (auth)/                   # Route group: Authentication
 │   ├── login/page.tsx
@@ -167,7 +169,7 @@ src/app/
 │   │   └── [id]/
 │   │       ├── page.tsx      # Recipe detail
 │   │       ├── edit/page.tsx
-│   │       └── cooking/page.tsx  # Cooking mode
+│   │       └── cooking/page.tsx  # Cooking mode (with setup screen + servings scaling)
 │   ├── categorie/page.tsx
 │   ├── cotture-in-corso/page.tsx # Active cooking sessions
 │   └── estrattore-ricette/page.tsx # AI extractor UI
@@ -236,7 +238,8 @@ src/lib/
     ├── validation.ts         # Zod schemas
     ├── formatting.ts         # Time/date formatting
     ├── constants.ts          # App constants
-    └── recipe-parser.ts      # Markdown → structured recipes
+    ├── recipe-parser.ts      # Markdown → structured recipes
+    └── ingredient-scaler.ts  # Ingredient quantity scaling for servings
 ```
 
 ### `/src/types` - TypeScript Definitions
@@ -630,6 +633,83 @@ const ITALIAN_SEASONAL_INGREDIENTS = {
 };
 ```
 
+**Decision 8: Client-Side Ingredient Scaling**
+
+**Rationale:**
+- Instant feedback without API calls
+- Simple mathematical operations (multiplication/division)
+- Reduces server load and latency
+- No sensitive data involved
+
+**Implementation:**
+- `scaleQuantity()` utility in `src/lib/utils/ingredient-scaler.ts`
+- Handles Italian decimal format (comma separator: "1,5 kg")
+- Supports ranges ("2-3" → "4-6")
+- Preserves non-numeric quantities ("q.b." remains unchanged)
+- Real-time recalculation via `useEffect` when servings change
+
+**Trade-offs:**
+- Client-side logic could drift from server (but no server logic exists)
+- Edge cases in parsing (accepted for simplicity)
+
+**Decision 9: Setup Screen Pattern for Cooking Mode**
+
+**Rationale:**
+- Prevents duplicate session creation bug
+- Provides intentional setup step before cooking
+- Better UX (user commits to servings before starting)
+- Cleaner data model (one session per cooking instance)
+
+**Implementation:**
+- Two-phase UI: Setup → Cooking
+- Setup screen allows servings selection
+- "Avvia modalità cottura" button creates session with correct servings
+- Existing sessions skip setup mode (resume directly)
+
+**Flow:**
+```
+First visit:  Setup Screen → Select Servings → Start → Cooking Mode
+Resume:       Skip Setup → Cooking Mode (with saved state)
+```
+
+**Trade-offs:**
+- One extra step for users (justified by preventing bugs)
+- More complex state management (`isSetupMode` flag)
+
+**Decision 10: Auto-Deletion of Completed Cooking Sessions**
+
+**Rationale:**
+- Keeps database clean (no stale sessions)
+- Improves performance (fewer documents to query)
+- Better UX (completed = removed, clear state)
+- Automatic redirect prevents confusion
+
+**Implementation:**
+- Progress calculation: `(checkedItems / totalItems)`
+- When progress >= 100%, delete session and redirect to `/cotture-in-corso`
+- Deletion happens in both `handleToggleIngredient` and `handleToggleStep`
+
+**Trade-offs:**
+- No history of completed cooking (acceptable for MVP)
+- Could add "history" feature in Phase 2 if needed
+
+**Decision 11: SVG Favicon Implementation**
+
+**Rationale:**
+- Scalable to any resolution (retina displays, browser tabs, bookmarks)
+- Minimal file size (< 1KB)
+- Easy to modify (text-based format)
+- Next.js 14 auto-serves `icon.svg` from `app/` directory
+
+**Implementation:**
+- `src/app/icon.svg` with book + fork design
+- Uses brand primary color (#ef4444)
+- No build configuration needed (Next.js convention)
+
+**Trade-offs:**
+- Limited browser support for SVG favicons (fallback to default in older browsers)
+- Accepted for modern web app target audience
+
 ### Critical Code Paths
 
 **Path 1: User Registration Flow**
@@ -683,19 +763,32 @@ Delete:
   Confirm dialog → deleteRecipe(id) → Firestore deleteDoc()
 ```
 
-**Path 4: Cooking Session Flow**
+**Path 4: Cooking Session Flow** (Updated 2025-12-28)
 
 ```
 User clicks "👨‍🍳 Inizia a Cucinare"
+  → Navigate to /ricette/{id}/cooking
   → Check if session exists: getCookingSession(recipeId, userId)
-  → If not, create: createCookingSession(recipeId, userId)
-    → Initial state: checkedIngredients: [], checkedSteps: []
-  → Render cooking mode UI with checkboxes
-  → User checks ingredient → toggleIngredientChecked(sessionId, ingredientId, current[])
-    → Update Firestore: checkedIngredients += ingredientId
-  → Progress bar recalculates: (checked / total) * 100
-  → Screen stays awake (nosleep.js)
-  → Session persists in Firestore (resume anytime from "Cotture in Corso")
+  → If session exists:
+      → Load session (checkedIngredients, checkedSteps, servings)
+      → Skip setup mode → Go directly to cooking mode
+  → If NO session:
+      → Show setup screen
+      → User selects servings (default = recipe.servings || 4)
+      → User clicks "Avvia modalità cottura"
+      → Create session: createCookingSession(recipeId, userId, servings)
+      → Initial state: { checkedIngredients: [], checkedSteps: [], servings }
+      → Switch to cooking mode
+  → Cooking mode active:
+      → Enable screen wake lock (nosleep.js)
+      → Calculate scaled ingredients: scaleQuantity(quantity, originalServings, newServings)
+      → Render ingredients/steps with checkboxes
+      → User checks ingredient/step → toggle handler updates Firestore
+      → Progress bar recalculates: (checked / total) * 100
+      → If progress >= 100%:
+          → Delete session: deleteCookingSession(sessionId)
+          → Redirect to /cotture-in-corso
+      → Session persists in Firestore (resume anytime from "Cotture in Corso")
 ```
 
 ### Error Handling Strategy
@@ -1265,11 +1358,11 @@ User clicks Delete button
 
 ---
 
-### Cooking Session Flow
+### Cooking Session Flow (Updated 2025-12-28)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                   Cooking Mode Flow                                  │
+│                   Cooking Mode Flow (with Setup Screen)              │
 └─────────────────────────────────────────────────────────────────────┘
                                 │
                                 ▼
@@ -1308,15 +1401,34 @@ User clicks Delete button
          └──────────────────────────────────────────┘
                    │                    │
                    │                    │
-        If exists  │                    │  If not exists
+        If exists  │                    │  If NOT exists
                    ▼                    ▼
          ┌─────────────────┐  ┌──────────────────────┐
-         │ Load session    │  │ createCookingSession │
-         │ data:           │  │ (recipeId, userId)   │
-         │ - checkedIng[]  │  │ Initial state:       │
-         │ - checkedSteps[]│  │ - checkedIng: []     │
-         │                 │  │ - checkedSteps: []   │
+         │ Load session:   │  │ Show SETUP SCREEN:   │
+         │ - checkedIng[]  │  │ - Display servings   │
+         │ - checkedSteps[]│  │   selector (+/- btns)│
+         │ - servings      │  │ - Default = recipe.  │
+         │                 │  │   servings || 4      │
+         │ SKIP setup mode │  │ - "Avvia modalità    │
+         │ Go to cooking   │  │   cottura" button    │
          └─────────────────┘  └──────────────────────┘
+                   │                    │
+                   │                    ▼
+                   │          ┌──────────────────────┐
+                   │          │ User selects servings│
+                   │          │ Click "Avvia"        │
+                   │          └──────────────────────┘
+                   │                    │
+                   │                    ▼
+                   │          ┌──────────────────────┐
+                   │          │ createCookingSession │
+                   │          │ (recipeId, userId,   │
+                   │          │  servings)           │
+                   │          │ Initial state:       │
+                   │          │ - checkedIng: []     │
+                   │          │ - checkedSteps: []   │
+                   │          │ - servings: selected │
+                   │          └──────────────────────┘
                    │                    │
                    └──────────┬─────────┘
                               ▼
@@ -1326,11 +1438,22 @@ User clicks Delete button
          └──────────────────────────────────────────┘
                               ▼
          ┌──────────────────────────────────────────┐
+         │  Calculate scaled ingredients:           │
+         │  For each ingredient:                    │
+         │    scaledQty = scaleQuantity(            │
+         │      quantity,                           │
+         │      recipe.servings || 4,               │
+         │      session.servings                    │
+         │    )                                     │
+         │  (src/lib/utils/ingredient-scaler.ts)    │
+         └──────────────────────────────────────────┘
+                              ▼
+         ┌──────────────────────────────────────────┐
          │  Render cooking UI:                      │
          │  - Recipe title                          │
-         │  - Servings, prep/cook time              │
+         │  - Servings selector (adjust on-the-fly) │
          │  - Progress bar (% completion)           │
-         │  - Ingredients (collapsible sections)    │
+         │  - Scaled ingredients (collapsible)      │
          │    → Checkbox for each ingredient        │
          │  - Steps (collapsible sections)          │
          │    → Checkbox for each step              │
@@ -1338,71 +1461,64 @@ User clicks Delete button
                               │
                               ▼
          ┌──────────────────────────────────────────┐
-         │  User checks/unchecks ingredient         │
+         │  User checks/unchecks ingredient or step │
          └──────────────────────────────────────────┘
                               │
                               ▼
          ┌──────────────────────────────────────────┐
-         │  toggleIngredientChecked(                │
-         │    sessionId,                            │
-         │    ingredientId,                         │
-         │    currentCheckedIngredients             │
-         │  )                                       │
-         │  (cooking-sessions.ts:100)               │
+         │  toggleIngredientChecked() or            │
+         │  toggleStepChecked()                     │
+         │  (cooking-sessions.ts)                   │
          └──────────────────────────────────────────┘
                               │
                               ▼
          ┌──────────────────────────────────────────┐
          │  Update Firestore:                       │
-         │  - If checked: add to checkedIngredients │
-         │  - If unchecked: remove from array       │
+         │  - Add/remove from checkedIngredients    │
          │  - Update lastUpdatedAt timestamp        │
          └──────────────────────────────────────────┘
                               │
                               ▼
          ┌──────────────────────────────────────────┐
-         │  Re-render UI:                           │
-         │  - Update checkboxes                     │
-         │  - Recalculate progress bar:             │
-         │    (checkedIng + checkedSteps) /         │
-         │    (totalIng + totalSteps) * 100         │
+         │  Calculate progress:                     │
+         │  progress = (checked / total)            │
          └──────────────────────────────────────────┘
                               │
-                              ▼
-         ┌──────────────────────────────────────────┐
-         │  Same flow for step checkboxes:          │
-         │  toggleStepChecked(...)                  │
-         │  (cooking-sessions.ts:116)               │
-         └──────────────────────────────────────────┘
-                              │
-                              ▼
-         ┌──────────────────────────────────────────┐
-         │  Session persists in Firestore           │
-         │  → User can leave and resume anytime     │
-         └──────────────────────────────────────────┘
-                              │
-                              ▼
+                   ┌──────────┴────────────┐
+                   │                       │
+          progress < 1.0          progress >= 1.0
+                   │                       │
+                   ▼                       ▼
+         ┌─────────────────┐  ┌──────────────────────┐
+         │ Update UI:      │  │ AUTO-DELETE SESSION: │
+         │ - Checkboxes    │  │ deleteCookingSession │
+         │ - Progress bar  │  │ (sessionId)          │
+         │                 │  │                      │
+         │ Session persists│  │ Redirect to          │
+         │ in Firestore    │  │ /cotture-in-corso    │
+         └─────────────────┘  └──────────────────────┘
+                   │
+                   ▼
          ┌──────────────────────────────────────────┐
          │  View all active sessions:               │
          │  /cotture-in-corso page                  │
          │  - Shows all recipes with active sessions│
          │  - Displays progress % for each          │
-         │  - Click to resume cooking               │
-         └──────────────────────────────────────────┘
-                              │
-                              ▼
-         ┌──────────────────────────────────────────┐
-         │  Optional: Delete session                │
-         │  (when recipe is finished or abandoned)  │
-         │  deleteCookingSession(sessionId)         │
+         │  - Click to resume cooking (skip setup)  │
          └──────────────────────────────────────────┘
 ```
 
 **State Synchronization:**
 
-- Real-time updates via Firestore (not using listeners in current implementation)
-- Manual refetch on component mount
-- Optimistic UI updates (checkbox state changes immediately, then syncs to Firestore)
+- Real-time ingredient scaling via `useEffect` when servings change
+- Firestore updates on checkbox toggle (optimistic UI)
+- Progress auto-calculated after each toggle
+- Session auto-deleted when progress reaches 100%
+
+**New Features (2025-12-28):**
+- Setup screen before cooking starts (prevents duplicate sessions)
+- Servings selection with real-time ingredient quantity scaling
+- Auto-deletion of completed cooking sessions
 
 ---
 
@@ -1624,44 +1740,71 @@ Upload PDF → Claude extracts recipes → Parse markdown → AI suggests catego
 
 ---
 
-### 3. Advanced Cooking Mode
+### 3. Advanced Cooking Mode (Updated 2025-12-28)
 
-**Overview**: Interactive cooking experience with progress tracking, screen wake lock, and session persistence.
+**Overview**: Interactive cooking experience with setup screen, servings scaling, progress tracking, screen wake lock, session persistence, and auto-cleanup.
 
 **Key Components:**
 
 | Component | Location | Responsibility |
 |-----------|----------|----------------|
-| `CookingModePage` | `src/app/(dashboard)/ricette/[id]/cooking/page.tsx` | Main cooking interface |
-| `IngredientListCollapsible` | (with checkboxes) | Interactive ingredient checklist |
+| `CookingModePage` | `src/app/(dashboard)/ricette/[id]/cooking/page.tsx` | Main cooking interface + setup screen |
+| `IngredientListCollapsible` | (with checkboxes) | Interactive ingredient checklist (with scaled quantities) |
 | `StepsListCollapsible` | (with checkboxes) | Interactive step checklist |
+| `scaleQuantity()` | `src/lib/utils/ingredient-scaler.ts` | Ingredient quantity scaling utility |
 
 **Service Layer:**
 
 `src/lib/firebase/cooking-sessions.ts`:
 - `getCookingSession(recipeId, userId)`
-- `createCookingSession(recipeId, userId)`
+- `createCookingSession(recipeId, userId, servings?)` ← **Updated: accepts servings**
 - `updateCookingSession(sessionId, updates)`
 - `toggleIngredientChecked(sessionId, ingredientId, current[])`
 - `toggleStepChecked(sessionId, stepId, current[])`
+- `deleteCookingSession(sessionId)` ← **New: for auto-deletion**
 - `getUserCookingSessions(userId)` - for "Cotture in Corso" page
 
 **Features:**
 
-1. **Screen Wake Lock**
+1. **Setup Screen Pattern** ✨ **NEW (2025-12-28)**
+   - Two-phase flow: Setup → Cooking
+   - Prevents duplicate session creation bug
+   - User selects servings before session is created
+   - Servings selector: +/- buttons + number input (1-99 range)
+   - "Avvia modalità cottura" button creates session
+   - **Resume sessions skip setup** (existing sessions load directly)
+
+2. **Servings Selection & Ingredient Scaling** ✨ **NEW (2025-12-28)**
+   - User selects servings (default = recipe servings or 4)
+   - Real-time ingredient quantity scaling via `scaleQuantity()` utility
+   - Supports Italian decimal format ("1,5 kg", "200 g")
+   - Handles ranges ("2-3" → "4-6" when doubled)
+   - Preserves non-numeric quantities ("q.b." unchanged)
+   - Scaling recalculated via `useEffect` when servings change
+   - Decimal precision: 2 decimal places, comma separator
+
+   Example scaling:
+   ```typescript
+   Original: "200 g" for 4 servings
+   Scaled:   "100 g" for 2 servings
+   Scaled:   "300 g" for 6 servings
+   ```
+
+3. **Screen Wake Lock**
    - Uses `nosleep.js` library
    - Prevents screen from sleeping during cooking
    - Auto-disabled when leaving cooking mode
    - Critical for hands-free cooking
 
-2. **Progress Tracking**
+4. **Progress Tracking**
 
-   Session data structure:
+   Session data structure (updated):
    ```typescript
    {
      id: string;
      recipeId: string;
      userId: string;
+     servings?: number;             // ← NEW: Number of servings being cooked
      checkedIngredients: string[];  // Array of ingredient IDs
      checkedSteps: string[];        // Array of step IDs
      startedAt: Timestamp;
@@ -1676,29 +1819,44 @@ Upload PDF → Claude extracts recipes → Parse markdown → AI suggests catego
      (totalIngredients + totalSteps) * 100;
    ```
 
-3. **Real-Time State Sync**
+5. **Auto-Deletion at 100%** ✨ **NEW (2025-12-28)**
+   - Sessions auto-delete when progress >= 100%
+   - Triggers in `handleToggleIngredient` and `handleToggleStep`
+   - Automatic redirect to `/cotture-in-corso` after deletion
+   - Keeps database clean (no stale completed sessions)
+
+6. **Real-Time State Sync**
    - Every checkbox change updates Firestore
    - `lastUpdatedAt` timestamp auto-updated
    - Optimistic UI (immediate checkbox state change)
    - Session persists across page reloads
 
-4. **Resumable Sessions**
+7. **Resumable Sessions**
    - Sessions stored in Firestore `cooking_sessions` collection
    - View all active cooking sessions: `/cotture-in-corso`
-   - Resume from any device
+   - Resume from any device (skips setup screen)
    - Progress percentage displayed (e.g., "45% completato")
+   - Saved servings selection preserved
 
-5. **Cooking-Optimized UI**
+8. **Cooking-Optimized UI**
    - Large touch targets (mobile-friendly)
    - Clear visual hierarchy
    - Collapsible sections to reduce scrolling
    - Read-from-distance typography
    - Minimal distractions
+   - Servings selector visible during cooking (adjust on-the-fly)
 
 **Pages:**
 
-- `/ricette/[id]/cooking` - Cooking mode interface
+- `/ricette/[id]/cooking` - Cooking mode interface (with setup screen)
 - `/cotture-in-corso` - Dashboard of active cooking sessions
+
+**User Flow:**
+
+```
+First time:   Setup Screen → Select Servings → "Avvia" → Cooking Mode → Auto-delete at 100%
+Resume:       Skip Setup → Cooking Mode (with saved servings) → Auto-delete at 100%
+```
 
 ---
 
