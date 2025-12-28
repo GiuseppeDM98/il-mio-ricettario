@@ -114,16 +114,19 @@ interface Recipe {
 ### 5. Firebase Optional Fields
 - **IMPORTANT**: Firebase Firestore does NOT accept `undefined` values in documents
 - Always use `null` instead of `undefined` for optional fields
-- This applies to all optional fields in `Ingredient`, `Step`, and other domain models
+- This applies to all optional fields in `Ingredient`, `Step`, `CookingSession`, and other domain models
 - Example:
   ```typescript
   // ❌ WRONG - Will cause Firebase error
   { section: section || undefined }
+  { servings: servings || undefined }
 
   // ✅ CORRECT - Firebase compatible
   { section: section || null }
+  { servings: servings || null }
   ```
 - When parsing recipes from PDF, the parser automatically uses `null` for empty optional fields
+- When creating cooking sessions, use `null` if servings is not provided
 
 ### 6. AI Categorization Pattern
 
@@ -256,7 +259,69 @@ When creating or updating UI components, follow these responsive design patterns
 
 **Reference implementation**: See [src/app/(dashboard)/categorie/page.tsx](src/app/(dashboard)/categorie/page.tsx) for comprehensive mobile optimization examples.
 
-### 9. Styling System
+### 9. Cooking Mode Patterns (Updated 2025-12-28)
+
+**Setup Screen Pattern**:
+- Cooking mode has TWO phases: Setup → Cooking
+- Setup screen shown on first visit (no existing session)
+- Resume sessions skip setup (load directly to cooking mode)
+
+```typescript
+// State management
+const [isSetupMode, setIsSetupMode] = useState(true);
+
+// Check for existing session
+useEffect(() => {
+  const session = await getCookingSession(recipeId, userId);
+  if (session) {
+    // Resume: skip setup
+    setIsSetupMode(false);
+    loadSessionData(session);
+  } else {
+    // First visit: show setup
+    setIsSetupMode(true);
+  }
+}, []);
+
+// Create session ONLY when user clicks "Avvia"
+const handleStartCooking = async () => {
+  await createCookingSession(recipeId, userId, servings);
+  setIsSetupMode(false);
+};
+```
+
+**Why this pattern?**
+- Prevents duplicate session creation (bug fixed 2025-12-28)
+- Provides intentional setup step before cooking
+- Better UX (user commits to servings selection)
+
+**Ingredient Scaling Pattern**:
+```typescript
+// Real-time scaling via useEffect
+useEffect(() => {
+  if (recipe && servings > 0) {
+    const scaled = recipe.ingredients.map(ing => ({
+      ...ing,
+      quantity: ing.quantity
+        ? scaleQuantity(ing.quantity, recipe.servings || 4, servings)
+        : '',
+    }));
+    setScaledIngredients(scaled);
+  }
+}, [recipe, servings]);
+```
+
+**Auto-deletion Pattern**:
+```typescript
+// In toggle handlers (ingredient/step)
+const progress = (checkedItems.length / totalItems);
+if (progress >= 1.0) {
+  await deleteCookingSession(sessionId);
+  router.push('/cotture-in-corso');
+}
+```
+
+### 10. Styling System
 - Design tokens via CSS variables in HSL format (see [tailwind.config.ts](tailwind.config.ts:11-54))
 - Primary color: Red theme (#ef4444 variants)
 - Use semantic colors: `bg-primary`, `text-muted-foreground`, `border`
@@ -299,6 +364,102 @@ When creating or updating UI components, follow these responsive design patterns
 
 ---
 
+## Common Errors to Avoid
+
+### Error 1: Duplicate Cooking Sessions (FIXED 2025-12-28)
+
+**Symptom**: Two cooking sessions created when entering cooking mode
+- One with original servings (e.g., 4)
+- Another with user-selected servings
+
+**Root Cause**: Session auto-created in `useEffect` on page load, then updated/re-created when user changed servings.
+
+**Solution**: Implemented setup screen pattern
+```typescript
+// ❌ WRONG - Auto-creates session immediately
+useEffect(() => {
+  let session = await getCookingSession(recipeId, userId);
+  if (!session) {
+    await createCookingSession(recipeId, userId, defaultServings);
+  }
+}, []);
+
+// ✅ CORRECT - Setup screen prevents auto-creation
+useEffect(() => {
+  const session = await getCookingSession(recipeId, userId);
+  if (session) {
+    // Resume: skip setup, load session
+    setIsSetupMode(false);
+    loadSessionData(session);
+  } else {
+    // First visit: show setup screen
+    setIsSetupMode(true);
+  }
+}, []);
+
+// Session created ONLY when user clicks "Avvia"
+const handleStartCooking = async () => {
+  await createCookingSession(recipeId, userId, servings);
+  setIsSetupMode(false);
+};
+```
+
+**Prevention**:
+- Always use setup screen pattern for cooking mode
+- Never auto-create sessions in useEffect
+- Create sessions only in response to explicit user action
+
+### Error 2: Firebase `undefined` Values
+
+**Symptom**: Firestore error when creating/updating documents
+
+**Root Cause**: Firebase does NOT accept `undefined` values in documents
+
+**Solution**: Always use `null` for optional fields
+```typescript
+// ❌ WRONG
+await updateDoc(docRef, {
+  servings: servings || undefined, // Error!
+});
+
+// ✅ CORRECT
+await updateDoc(docRef, {
+  servings: servings || null,
+});
+```
+
+**Prevention**:
+- Use `null` instead of `undefined` for all optional fields
+- Check all function parameters before passing to Firebase
+- TypeScript type: `servings?: number` → pass `number | null` to Firebase
+
+### Error 3: Incorrect Quantity Scaling Format
+
+**Symptom**: Ingredient quantities like "1 1/2 , 5 kg" appear confusing
+
+**Root Cause**: Decimal separators not normalized, fractions hard to read
+
+**Solution**: Use decimal notation with Italian format
+```typescript
+// ❌ WRONG - Fraction notation
+"3 ¾ l"  // Hard to read
+
+// ✅ CORRECT - Decimal notation with comma
+"3,75 l" // Clear and consistent
+```
+
+**Implementation**: See `src/lib/utils/ingredient-scaler.ts`
+- Normalizes spaces around decimal separators
+- Converts all quantities to decimal (2 decimal places)
+- Uses comma separator for Italian locale
+
+**Prevention**:
+- Use `scaleQuantity()` utility for all quantity transformations
+- Always format numbers with comma separator for Italian locale
+- Avoid fraction notation (½, ¼, ¾) in final output
+
+---
+
 ## Testing Strategy
 
 ### Current Setup
@@ -324,6 +485,10 @@ The project follows a 3-phase roadmap (see README.md):
 - ✅ Categories/subcategories
 - ✅ Mobile-responsive UI with optimized category management
 - ✅ Cooking mode (screen wake lock via nosleep.js)
+- ✅ **NEW (2025-12-28)**: Setup screen for cooking mode (prevents duplicate sessions)
+- ✅ **NEW (2025-12-28)**: Servings selection with real-time ingredient scaling
+- ✅ **NEW (2025-12-28)**: Auto-deletion of completed cooking sessions (100% progress)
+- ✅ **NEW (2025-12-28)**: Favicon (SVG format, book + fork design)
 - ✅ PDF extraction with Claude AI
 - ✅ AI-powered auto-categorization with automatic category creation
 - ✅ Seasonal classification based on Italian ingredients
