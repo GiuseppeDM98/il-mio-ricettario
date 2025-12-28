@@ -32,6 +32,7 @@ export default function CookingModePage() {
   const [checkedSteps, setCheckedSteps] = useState<string[]>([]);
   const [servings, setServings] = useState<number>(4); // Default to 4 servings
   const [scaledIngredients, setScaledIngredients] = useState<Ingredient[]>([]);
+  const [isSetupMode, setIsSetupMode] = useState(true); // Start in setup mode
 
   useEffect(() => {
     const noSleep = new NoSleep();
@@ -60,20 +61,18 @@ export default function CookingModePage() {
           const defaultServings = fetchedRecipe.servings || 4;
           setServings(defaultServings);
 
-          // Fetch or create cooking session
-          let session = await getCookingSession(id as string, user.uid);
-          if (!session) {
-            // Create session with recipe servings as default
-            const sessionId = await createCookingSession(id as string, user.uid, defaultServings);
-            session = await getCookingSession(id as string, user.uid);
-          }
-
+          // Check if a session already exists
+          const session = await getCookingSession(id as string, user.uid);
           if (session) {
+            // Session exists - load it and skip setup mode
             setCookingSession(session);
             setCheckedIngredients(session.checkedIngredients);
             setCheckedSteps(session.checkedSteps);
-            // Use session servings if available, otherwise use recipe default
             setServings(session.servings || defaultServings);
+            setIsSetupMode(false); // Already has a session, go straight to cooking mode
+          } else {
+            // No session exists - stay in setup mode
+            setIsSetupMode(true);
           }
         } catch (err) {
           setError('Errore nel caricamento della ricetta.');
@@ -99,13 +98,37 @@ export default function CookingModePage() {
     }
   }, [recipe, servings]);
 
+  const handleStartCooking = async () => {
+    if (!user || !id) return;
+
+    try {
+      // Create cooking session with selected servings
+      const sessionId = await createCookingSession(id as string, user.uid, servings);
+
+      // Fetch the newly created session
+      const session = await getCookingSession(id as string, user.uid);
+
+      if (session) {
+        setCookingSession(session);
+        setCheckedIngredients(session.checkedIngredients);
+        setCheckedSteps(session.checkedSteps);
+      }
+
+      // Switch to cooking mode
+      setIsSetupMode(false);
+    } catch (err) {
+      console.error('Error starting cooking session:', err);
+      setError('Errore durante l\'avvio della modalità cottura.');
+    }
+  };
+
   const handleServingsChange = async (newServings: number) => {
     if (newServings < 1 || newServings > 99) return; // Reasonable limits
 
     setServings(newServings);
 
-    // Update cooking session
-    if (cookingSession) {
+    // Update cooking session only if we're already in cooking mode
+    if (cookingSession && !isSetupMode) {
       try {
         await updateCookingSession(cookingSession.id, {
           servings: newServings,
@@ -188,6 +211,89 @@ export default function CookingModePage() {
 
   const originalServings = recipe.servings || 4;
 
+  // Setup mode - shown before cooking starts
+  if (isSetupMode) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8">
+        <div className="max-w-2xl mx-auto">
+          <div className="flex items-center mb-6">
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() => router.push(`/ricette/${id}`)}
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              Indietro
+            </Button>
+          </div>
+
+          <div className="text-center mb-8">
+            <h1 className="text-4xl sm:text-5xl font-bold mb-4">{recipe.title}</h1>
+            <p className="text-xl text-gray-600">Prepara la tua modalità cottura</p>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-lg p-6 sm:p-8 border-2 border-primary/20">
+            <h2 className="text-2xl font-semibold mb-6 text-center">Per quante persone cucini?</h2>
+
+            <div className="mb-8 p-6 bg-gray-50 rounded-lg">
+              <div className="text-center mb-4">
+                <span className="text-lg text-gray-700">
+                  Ricetta originale per <span className="font-bold text-primary">{originalServings}</span> {originalServings === 1 ? 'persona' : 'persone'}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-center gap-4">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={() => handleServingsChange(servings - 1)}
+                  disabled={servings <= 1}
+                  className="w-14 h-14 p-0"
+                >
+                  <Minus className="w-6 h-6" />
+                </Button>
+                <input
+                  type="number"
+                  value={servings}
+                  onChange={(e) => handleServingsChange(parseInt(e.target.value) || 1)}
+                  className="w-24 h-14 text-center text-3xl font-bold border-2 border-gray-300 rounded-md focus:border-primary focus:outline-none"
+                  min="1"
+                  max="99"
+                />
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={() => handleServingsChange(servings + 1)}
+                  disabled={servings >= 99}
+                  className="w-14 h-14 p-0"
+                >
+                  <Plus className="w-6 h-6" />
+                </Button>
+                <span className="text-lg font-medium">{servings === 1 ? 'persona' : 'persone'}</span>
+              </div>
+
+              {servings !== originalServings && (
+                <p className="text-center text-sm text-gray-600 mt-4">
+                  ✨ Le quantità degli ingredienti saranno adattate automaticamente
+                </p>
+              )}
+            </div>
+
+            <Button
+              onClick={handleStartCooking}
+              size="lg"
+              className="w-full h-16 text-2xl font-bold"
+            >
+              👨‍🍳 Avvia modalità cottura
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Cooking mode - shown after setup is complete
   return (
     <div className="p-4 sm:p-6 lg:p-8 text-xl">
       <div className="flex items-center mb-6">
