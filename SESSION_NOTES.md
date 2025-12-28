@@ -125,7 +125,21 @@ Implementare 3 miglioramenti alla modalità cottura e aggiungere favicon:
 
 ## Bug Risolti
 
-Nessun bug riscontrato. Implementazione di nuove feature.
+### Bug 1: Sessioni di cottura duplicate
+**Problema**: Quando l'utente entrava in modalità cottura, venivano create DUE sessioni in Firestore:
+- Una con 4 porzioni (default originale)
+- Una con le porzioni selezionate dall'utente
+
+**Root Cause**: La sessione veniva creata automaticamente nel `useEffect` al caricamento della pagina, e poi veniva aggiornata quando l'utente modificava le porzioni. Questo causava la creazione di una seconda sessione.
+
+**Soluzione**: Implementato setup screen flow
+- Quando l'utente entra in modalità cottura, vede prima uno "setup screen"
+- User seleziona le porzioni desiderate
+- User clicca "Avvia modalità cottura"
+- SOLO a quel punto viene creata la sessione con le porzioni corrette
+- Se una sessione già esiste (riprendi cottura), salta setup mode
+
+**Risultato**: Una sola sessione creata con le porzioni corrette fin dall'inizio.
 
 ---
 
@@ -145,6 +159,31 @@ Nessuna nuova dipendenza. Usate solo librerie esistenti:
 - [x] Implementare UI selezione porzioni
 - [x] Implementare ricalcolo quantità ingredienti
 - [x] Auto-eliminazione cotture al 100%
+- [x] Fix bug sessioni duplicate (setup screen implementato)
+
+### [11:00] - Bug Fix: Duplicate Sessions
+**Cosa**: Risolto bug di sessioni duplicate in modalità cottura
+**Perché**: Due sessioni create - una con 4 porzioni, una con porzioni selezionate
+**Come**:
+- Aggiunto setup screen PRIMA di avviare la cottura
+- Setup mode state: `isSetupMode` (boolean)
+- Flow modificato:
+  1. User entra in modalità cottura → vede setup screen
+  2. User seleziona porzioni
+  3. User clicca "Avvia modalità cottura"
+  4. SOLO ORA viene creata la sessione con le porzioni corrette
+- Se sessione già esistente (riprendi cottura) → skip setup, vai diretto a cooking
+- Modificato `handleServingsChange()` per NON aggiornare Firestore se in setup mode
+- Setup screen UI:
+  - Card centered con shadow
+  - Titolo + subtitle
+  - Servings selector (stile identico a cooking mode)
+  - Grande pulsante "👨‍🍳 Avvia modalità cottura"
+  - Pulsante "Indietro" per tornare alla ricetta
+- Handler `handleStartCooking()`:
+  - Crea session con servings selezionate
+  - Carica session data
+  - Switch da setup mode a cooking mode
 
 ### Potenziali Miglioramenti Futuri
 - [ ] Testing: Unit tests per `ingredient-scaler.ts` (frazioni, range, edge cases)
@@ -196,10 +235,14 @@ Nessun blocco riscontrato durante lo sviluppo.
 5. **src/lib/utils/ingredient-scaler.ts** (nuovo)
    - Utility per scaling quantità ingredienti
 
-6. **src/app/(dashboard)/ricette/[id]/cooking/page.tsx**
+6. **src/app/(dashboard)/ricette/[id]/cooking/page.tsx** (MAJOR)
    - Aggiunto UI selezione porzioni
    - Implementato scaling ingredienti in real-time
    - Implementato auto-eliminazione al 100%
+   - Aggiunto setup screen prima di avviare cottura
+   - Fix bug sessioni duplicate (setup mode flow)
+   - Handler `handleStartCooking()` per creare sessione
+   - Modificato `handleServingsChange()` per non aggiornare in setup mode
 
 ---
 
