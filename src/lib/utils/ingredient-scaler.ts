@@ -7,10 +7,11 @@
  *
  * Features:
  * - Normalizes Italian decimal format ("1, 5 kg" → "1,5 kg")
- * - Handles fractions with Unicode symbols ("1/2" → "½", "1.5" → "1½")
+ * - Handles fractions with Unicode symbols ("1/2" → "½", "1.5" → "1 ½")
  * - Supports ranges ("2-3" → "4-6")
  * - Preserves non-scalable quantities ("q.b." remains unchanged)
  * - Uses Italian decimal notation (comma as separator)
+ * - Clear spacing between numbers and fractions for readability
  *
  * Examples:
  *   scaleQuantity("200 g", 4, 2) → "100 g"
@@ -126,14 +127,15 @@ function formatScaledNumber(value: number, unit: string): string {
     }
   }
 
-  // Check for whole number + fraction (e.g., 1.5 → "1½")
+  // Check for whole number + fraction (e.g., 1.5 → "1 ½")
   const whole = Math.floor(value);
   const decimal = value - whole;
 
   if (whole > 0 && decimal > 0.05) {
     for (const fraction of unicodeFractions) {
       if (Math.abs(decimal - fraction.value) < 0.05) {
-        return `${whole}${fraction.display}${unit ? ' ' + unit : ''}`;
+        // Add space between whole number and fraction for better readability
+        return `${whole} ${fraction.display}${unit ? ' ' + unit : ''}`;
       }
     }
   }
