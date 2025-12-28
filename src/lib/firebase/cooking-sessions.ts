@@ -42,13 +42,15 @@ export async function getCookingSession(
 // Create new cooking session
 export async function createCookingSession(
   recipeId: string,
-  userId: string
+  userId: string,
+  servings?: number
 ): Promise<string> {
   const sessionsRef = collection(db, 'cooking_sessions');
 
   const docRef = await addDoc(sessionsRef, {
     recipeId,
     userId,
+    servings: servings || null, // Firebase requires null instead of undefined
     checkedIngredients: [],
     checkedSteps: [],
     startedAt: serverTimestamp(),
