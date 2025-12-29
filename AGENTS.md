@@ -2,7 +2,7 @@
 
 This document provides instructions for AI agents working on **Il Mio Ricettario**, a Next.js 14 recipe management app with Firebase backend and AI-powered features (Claude 4.5 for PDF extraction). Follow these principles when proposing new code or modifying existing code.
 
-**Last Updated:** 2025-12-28
+**Last Updated:** 2025-12-29
 
 ---
 
@@ -252,12 +252,55 @@ When creating or updating UI components, follow these responsive design patterns
 </div>
 ```
 
-#### Navigation Patterns
-- **Mobile**: Hamburger menu in header (`<MobileNav />` with `md:hidden`)
-- **Desktop**: Sidebar with `hidden md:block`
-- **Layout**: `flex flex-col` for mobile, `flex flex-row` for desktop split view
+#### Navigation Patterns (Updated 2025-12-29)
 
-**Reference implementation**: See [src/app/(dashboard)/categorie/page.tsx](src/app/(dashboard)/categorie/page.tsx) for comprehensive mobile optimization examples.
+**Three-Mode Responsive Navigation**:
+- **Desktop (≥1024px)**: Sidebar always visible, no hamburger, no bottom nav
+- **Mobile Portrait (<1024px + portrait)**: Bottom navigation (4 fixed tabs), sidebar hidden, no hamburger
+- **Mobile Landscape (<1024px + landscape)**: Hamburger menu + sliding sidebar, no bottom nav
+
+**Critical Pattern**: Always use `max-lg:` prefix with orientation variants to prevent desktop conflicts
+
+#### Bottom Navigation Pattern (Mobile Portrait)
+```tsx
+// Fixed position bottom nav - portrait only
+<nav className={cn(
+  'lg:hidden max-lg:landscape:hidden',
+  'max-lg:portrait:flex max-lg:portrait:fixed',
+  'max-lg:portrait:bottom-0 max-lg:portrait:left-0 max-lg:portrait:right-0',
+  'max-lg:portrait:z-50 max-lg:portrait:border-t max-lg:portrait:bg-white'
+)}>
+  {tabs.map(tab => (
+    <Link href={tab.href} className="flex flex-1 flex-col items-center">
+      <Icon />
+      <span>{tab.label}</span>
+    </Link>
+  ))}
+</nav>
+```
+
+#### Responsive Sidebar Pattern (Desktop + Landscape)
+```tsx
+<aside className={cn(
+  // Desktop: always visible, static position
+  'lg:w-64 lg:flex-shrink-0 lg:block lg:relative lg:border-r',
+
+  // Mobile portrait: completely hidden
+  'max-lg:portrait:hidden',
+
+  // Mobile landscape: fixed with slide animation
+  'max-lg:landscape:fixed max-lg:landscape:inset-y-0 max-lg:landscape:left-0',
+  'max-lg:landscape:z-50 max-lg:landscape:w-64',
+  'max-lg:landscape:transition-transform max-lg:landscape:duration-300',
+
+  isOpen ? 'max-lg:landscape:translate-x-0' : 'max-lg:landscape:-translate-x-full'
+)}>
+```
+
+**Reference implementations**:
+- [src/components/layout/bottom-navigation.tsx](src/components/layout/bottom-navigation.tsx) - Bottom nav component
+- [src/components/layout/sidebar.tsx](src/components/layout/sidebar.tsx) - Responsive sidebar
+- [src/components/layout/more-sheet.tsx](src/components/layout/more-sheet.tsx) - Sheet from bottom
 
 ### 9. Cooking Mode Patterns (Updated 2025-12-28)
 
@@ -326,6 +369,72 @@ if (progress >= 1.0) {
 - Primary color: Red theme (#ef4444 variants)
 - Use semantic colors: `bg-primary`, `text-muted-foreground`, `border`
 - Avoid hardcoded colors; extend theme if needed
+
+### 11. Responsive Navigation Patterns (Added 2025-12-29)
+
+**Breakpoint Strategy:**
+- **Desktop threshold**: `lg` (1024px) instead of `md` (768px)
+- Tablets in landscape (768-1024px) are treated as mobile
+- Uses CSS orientation media queries for portrait/landscape detection
+
+**Critical Tailwind Pattern:**
+Always use `max-lg:` prefix with orientation variants to avoid desktop conflicts.
+
+```tsx
+// ✅ CORRECT - Desktop monitors (landscape) won't be affected
+className="max-lg:portrait:flex max-lg:landscape:hidden"
+
+// ❌ WRONG - Would apply to desktop monitors too
+className="portrait:flex landscape:hidden"
+```
+
+**Navigation Components:**
+
+| Component | Visibility | Purpose |
+|-----------|------------|---------|
+| `BottomNavigation` | `max-lg:portrait:flex` | Mobile portrait only |
+| Hamburger (Header) | `max-lg:landscape:flex` | Mobile landscape only |
+| Sidebar | `lg:block` (always) + `max-lg:landscape:` (toggle) | Desktop always, landscape with backdrop |
+
+**State Management:**
+- Dashboard layout is CLIENT component (uses `useState` for sidebar/sheet state)
+- Header and Sidebar receive props (`sidebarOpen`, `onSidebarToggle`, `isOpen`, `onClose`)
+- State resets on orientation change via `useEffect` + `window.matchMedia()`
+
+**Example Layout Pattern:**
+```tsx
+'use client';
+
+export default function DashboardLayout({ children }) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [moreSheetOpen, setMoreSheetOpen] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024 || window.matchMedia('(orientation: portrait)').matches) {
+        setSidebarOpen(false); // Close sidebar if not landscape mobile
+      }
+      if (window.innerWidth >= 1024 || window.matchMedia('(orientation: landscape)').matches) {
+        setMoreSheetOpen(false); // Close sheet if not portrait mobile
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // ... rest of component
+}
+```
+
+**Main Content Padding:**
+```tsx
+<main className={cn(
+  'flex-1',
+  'lg:p-6',                          // Desktop padding
+  'max-lg:portrait:p-4 max-lg:portrait:pb-20',  // Portrait: extra bottom for nav
+  'max-lg:landscape:p-4'              // Landscape: standard padding
+)}>
+```
 
 ---
 
@@ -457,6 +566,54 @@ await updateDoc(docRef, {
 - Use `scaleQuantity()` utility for all quantity transformations
 - Always format numbers with comma separator for Italian locale
 - Avoid fraction notation (½, ¼, ¾) in final output
+
+### Error 4: Orientation Variants Without max-lg: Prefix (Added 2025-12-29)
+
+**Symptom**: Desktop navigation behaves incorrectly, bottom nav or hamburger appear on desktop
+
+**Root Cause**: Using `portrait:` or `landscape:` without `max-lg:` prefix applies to ALL screen sizes, including desktop monitors (which are typically landscape).
+
+**Solution**: ALWAYS prefix orientation variants with `max-lg:`
+
+```tsx
+// ❌ WRONG - Applies to desktop monitors too
+<nav className="portrait:flex landscape:hidden">
+
+// ✅ CORRECT - Only applies to screens <1024px
+<nav className="max-lg:portrait:flex max-lg:landscape:hidden">
+```
+
+**Prevention**:
+- Code review checklist: All `portrait:` and `landscape:` must have `max-lg:` prefix
+- Pattern: `max-lg:portrait:` = "screens <1024px AND portrait orientation"
+- Pattern: `max-lg:landscape:` = "screens <1024px AND landscape orientation"
+
+### Error 5: Sheet Component Missing Description (Radix UI Warning) (Added 2025-12-29)
+
+**Symptom**: Console warning "Missing `Description` or `aria-describedby={undefined}` for {DialogContent}"
+
+**Root Cause**: Radix UI Dialog/Sheet primitives require either `SheetDescription` or `aria-describedby` for accessibility.
+
+**Solution**: Always include `SheetDescription`, use `sr-only` class if visual description not needed
+
+```tsx
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+
+<SheetContent>
+  <SheetHeader>
+    <SheetTitle>Title</SheetTitle>
+    <SheetDescription className="sr-only">
+      Description for screen readers
+    </SheetDescription>
+  </SheetHeader>
+  {/* content */}
+</SheetContent>
+```
+
+**Prevention**:
+- Always import `SheetDescription` when using Sheet
+- Add to component template/snippet
+- Use `sr-only` class for hidden but accessible descriptions
 
 ---
 

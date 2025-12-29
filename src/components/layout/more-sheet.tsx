@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Grid3x3, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 
@@ -20,6 +20,7 @@ export function MoreSheet({ open, onOpenChange }: MoreSheetProps) {
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
+        showClose={false}
         className={cn(
           'max-lg:portrait:rounded-t-xl',
           'lg:hidden max-lg:landscape:hidden'
@@ -27,6 +28,9 @@ export function MoreSheet({ open, onOpenChange }: MoreSheetProps) {
       >
         <SheetHeader>
           <SheetTitle>Altro</SheetTitle>
+          <SheetDescription className="sr-only">
+            Menu aggiuntivo con altre opzioni dell'app
+          </SheetDescription>
         </SheetHeader>
 
         <div className="mt-4 space-y-2">

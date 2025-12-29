@@ -1,6 +1,6 @@
 # 🍝 Il Mio Ricettario - Claude Code Documentation
 
-> **Last Updated:** 2025-12-28
+> **Last Updated:** 2025-12-29
 > **Version:** 0.1.0
 > **Status:** Phase 1 MVP - Production Ready
 
@@ -31,7 +31,7 @@ Create a text-focused, fast, and functional recipe management system optimized f
 2. **AI-Powered**: Automatic recipe extraction from PDFs using Claude AI 4.5
 3. **Cooking-Optimized**: Advanced cooking mode with screen wake lock and progress tracking
 4. **Smart Organization**: AI-suggested categories and seasonal classification based on Italian ingredients
-5. **Mobile-First**: Fully responsive design optimized for use in the kitchen
+5. **Mobile-Optimized**: Context-aware navigation (bottom bar on portrait, sidebar on desktop, hamburger on landscape)
 
 ### Design Philosophy
 
@@ -100,7 +100,7 @@ No image uploads, no social features (Phase 1). Just pure recipe management with
 ```
 next.config.js       - Next.js config (standalone output, redirects)
 tsconfig.json        - TypeScript strict mode, path aliases (@/*)
-tailwind.config.ts   - Design system (HSL tokens, semantic colors)
+tailwind.config.ts   - Design system (HSL tokens, pb-safe utility for iOS notch)
 firebase.json        - Firebase hosting & Firestore config
 jest.config.js       - Jest testing configuration
 postcss.config.js    - PostCSS with Tailwind
@@ -304,6 +304,28 @@ Configured in `tsconfig.json`:
   }
 }
 ```
+
+### Navigation Components
+
+```
+src/components/layout/
+├── header.tsx               # App header with conditional hamburger
+├── sidebar.tsx             # Desktop/landscape sidebar with backdrop
+├── bottom-navigation.tsx   # Mobile portrait bottom nav (4 tabs)
+├── more-sheet.tsx          # "Altro" sheet (Categorie + Estrattore AI)
+└── footer.tsx              # App footer
+```
+
+**Responsive Navigation Strategy:**
+- **Desktop (≥1024px)**: Sidebar always visible, no hamburger, no bottom nav
+- **Mobile Portrait (<1024px + portrait)**: Bottom navigation (4 fixed tabs), sidebar hidden, no hamburger
+- **Mobile Landscape (<1024px + landscape)**: Hamburger menu + sliding sidebar, no bottom nav
+
+**Breakpoint:** `lg` (1024px) is the desktop/mobile threshold (changed from `md` 768px).
+
+**Critical Pattern:** Always use `max-lg:` prefix with orientation variants to prevent desktop conflicts:
+- `max-lg:portrait:flex` - Only applies on screens <1024px AND portrait
+- `max-lg:landscape:block` - Only applies on screens <1024px AND landscape
 
 ---
 
