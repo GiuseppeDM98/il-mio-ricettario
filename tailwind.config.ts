@@ -8,6 +8,9 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      screens: {
+        lg: '1440px',  // Override default 1024px - separates tablets from desktop
+      },
       minHeight: {
         'dvh': '100dvh', // Dynamic viewport height for mobile browsers
       },

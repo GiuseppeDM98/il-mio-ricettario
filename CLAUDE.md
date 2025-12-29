@@ -317,15 +317,15 @@ src/components/layout/
 ```
 
 **Responsive Navigation Strategy:**
-- **Desktop (≥1024px)**: Sidebar always visible, no hamburger, no bottom nav
-- **Mobile Portrait (<1024px + portrait)**: Bottom navigation (4 fixed tabs), sidebar hidden, no hamburger
-- **Mobile Landscape (<1024px + landscape)**: Hamburger menu + sliding sidebar, no bottom nav
+- **Desktop (≥1440px)**: Sidebar always visible, no hamburger, no bottom nav
+- **Mobile Portrait (<1440px + portrait)**: Bottom navigation (4 fixed tabs), sidebar hidden, no hamburger
+- **Mobile Landscape (<1440px + landscape)**: Hamburger menu + sliding sidebar, no bottom nav
 
-**Breakpoint:** `lg` (1024px) is the desktop/mobile threshold (changed from `md` 768px).
+**Breakpoint:** `lg` (1440px) is the desktop/mobile threshold (changed from `md` 768px).
 
 **Critical Pattern:** Always use `max-lg:` prefix with orientation variants to prevent desktop conflicts:
-- `max-lg:portrait:flex` - Only applies on screens <1024px AND portrait
-- `max-lg:landscape:block` - Only applies on screens <1024px AND landscape
+- `max-lg:portrait:flex` - Only applies on screens <1440px AND portrait
+- `max-lg:landscape:block` - Only applies on screens <1440px AND landscape
 
 ---
 

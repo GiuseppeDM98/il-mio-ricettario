@@ -16,10 +16,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   // Reset states on viewport change
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth >= 1024 || window.matchMedia('(orientation: portrait)').matches) {
+      if (window.innerWidth >= 1440 || window.matchMedia('(orientation: portrait)').matches) {
         setSidebarOpen(false);
       }
-      if (window.innerWidth >= 1024 || window.matchMedia('(orientation: landscape)').matches) {
+      if (window.innerWidth >= 1440 || window.matchMedia('(orientation: landscape)').matches) {
         setMoreSheetOpen(false);
       }
     };

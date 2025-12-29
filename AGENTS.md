@@ -255,9 +255,9 @@ When creating or updating UI components, follow these responsive design patterns
 #### Navigation Patterns (Updated 2025-12-29)
 
 **Three-Mode Responsive Navigation**:
-- **Desktop (≥1024px)**: Sidebar always visible, no hamburger, no bottom nav
-- **Mobile Portrait (<1024px + portrait)**: Bottom navigation (4 fixed tabs), sidebar hidden, no hamburger
-- **Mobile Landscape (<1024px + landscape)**: Hamburger menu + sliding sidebar, no bottom nav
+- **Desktop (≥1440px)**: Sidebar always visible, no hamburger, no bottom nav
+- **Mobile Portrait (<1440px + portrait)**: Bottom navigation (4 fixed tabs), sidebar hidden, no hamburger
+- **Mobile Landscape (<1440px + landscape)**: Hamburger menu + sliding sidebar, no bottom nav
 
 **Critical Pattern**: Always use `max-lg:` prefix with orientation variants to prevent desktop conflicts
 
@@ -373,8 +373,8 @@ if (progress >= 1.0) {
 ### 11. Responsive Navigation Patterns (Added 2025-12-29)
 
 **Breakpoint Strategy:**
-- **Desktop threshold**: `lg` (1024px) instead of `md` (768px)
-- Tablets in landscape (768-1024px) are treated as mobile
+- **Desktop threshold**: `lg` (1440px) instead of `md` (768px)
+- Tablets in landscape (768-1440px) are treated as mobile
 - Uses CSS orientation media queries for portrait/landscape detection
 
 **Critical Tailwind Pattern:**
@@ -411,10 +411,10 @@ export default function DashboardLayout({ children }) {
 
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth >= 1024 || window.matchMedia('(orientation: portrait)').matches) {
+      if (window.innerWidth >= 1440 || window.matchMedia('(orientation: portrait)').matches) {
         setSidebarOpen(false); // Close sidebar if not landscape mobile
       }
-      if (window.innerWidth >= 1024 || window.matchMedia('(orientation: landscape)').matches) {
+      if (window.innerWidth >= 1440 || window.matchMedia('(orientation: landscape)').matches) {
         setMoreSheetOpen(false); // Close sheet if not portrait mobile
       }
     };
@@ -579,14 +579,14 @@ await updateDoc(docRef, {
 // ❌ WRONG - Applies to desktop monitors too
 <nav className="portrait:flex landscape:hidden">
 
-// ✅ CORRECT - Only applies to screens <1024px
+// ✅ CORRECT - Only applies to screens <1440px
 <nav className="max-lg:portrait:flex max-lg:landscape:hidden">
 ```
 
 **Prevention**:
 - Code review checklist: All `portrait:` and `landscape:` must have `max-lg:` prefix
-- Pattern: `max-lg:portrait:` = "screens <1024px AND portrait orientation"
-- Pattern: `max-lg:landscape:` = "screens <1024px AND landscape orientation"
+- Pattern: `max-lg:portrait:` = "screens <1440px AND portrait orientation"
+- Pattern: `max-lg:landscape:` = "screens <1440px AND landscape orientation"
 
 ### Error 5: Sheet Component Missing Description (Radix UI Warning) (Added 2025-12-29)
 
@@ -614,6 +614,44 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '
 - Always import `SheetDescription` when using Sheet
 - Add to component template/snippet
 - Use `sr-only` class for hidden but accessible descriptions
+
+### Error 6: iPad Mini Landscape Treated as Desktop (FIXED 2025-12-29)
+
+**Symptom**: iPad Mini in landscape orientation (1024px) shows desktop sidebar instead of mobile hamburger menu
+
+**Root Cause**: Device width exactly matches Tailwind's default `lg` breakpoint (1024px)
+- Tailwind: `lg:` = `min-width: 1024px`
+- iPad Mini landscape: exactly 1024px wide
+- Result: `lg:` classes apply → sidebar visible, hamburger hidden
+
+**Solution**: Increase responsive breakpoint from 1024px to 1440px
+
+```typescript
+// tailwind.config.ts
+theme: {
+  extend: {
+    screens: {
+      lg: '1440px',  // Override default 1024px
+    },
+  }
+}
+
+// src/app/(dashboard)/layout.tsx
+// Update JavaScript checks
+if (window.innerWidth >= 1440 || ...) {  // Changed from 1024
+```
+
+**Prevention**:
+- Choose breakpoints that don't match common device widths exactly
+- 1440px is a safer threshold that separates tablets (≤1366px) from desktop
+- Document breakpoint rationale in config comments
+- Test on actual devices or accurate emulators (iPad Mini, iPad Pro, laptops)
+
+**Impact**:
+- ✅ iPad Mini landscape (1024px): Now mobile landscape (hamburger visible)
+- ✅ Tablets up to 1439px: Correctly treated as mobile
+- ✅ Laptops 1366px: Now mobile landscape (improved UX)
+- ✅ Desktop ≥1440px: Desktop mode unchanged
 
 ---
 
