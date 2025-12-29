@@ -7,6 +7,11 @@ jest.mock('@/lib/hooks/useAuth', () => ({
 }));
 
 describe('Header', () => {
+  const mockProps = {
+    sidebarOpen: false,
+    onSidebarToggle: jest.fn(),
+  };
+
   it('renders the header with user information when a user is logged in', () => {
     (useAuth as jest.Mock).mockReturnValue({
       user: {
@@ -15,7 +20,7 @@ describe('Header', () => {
       signOut: jest.fn(),
     });
 
-    render(<Header />);
+    render(<Header {...mockProps} />);
 
     expect(screen.getByText('Il Mio Ricettario')).toBeInTheDocument();
     expect(screen.getByText('Ciao, Test User')).toBeInTheDocument();
@@ -28,7 +33,7 @@ describe('Header', () => {
       signOut: jest.fn(),
     });
 
-    render(<Header />);
+    render(<Header {...mockProps} />);
 
     expect(screen.getByText('Il Mio Ricettario')).toBeInTheDocument();
     expect(screen.queryByText('Ciao,')).not.toBeInTheDocument();

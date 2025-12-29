@@ -8,6 +8,9 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      minHeight: {
+        'dvh': '100dvh', // Dynamic viewport height for mobile browsers
+      },
       colors: {
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
@@ -60,7 +63,15 @@ const config: Config = {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    function({ addUtilities }: any) {
+      addUtilities({
+        '.pb-safe': {
+          paddingBottom: 'env(safe-area-inset-bottom)',
+        },
+      });
+    },
+  ],
 }
 
 export default config
