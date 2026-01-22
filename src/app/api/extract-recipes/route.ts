@@ -1,6 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 
+/**
+ * PDF Recipe Extraction API
+ *
+ * Pipeline: PDF → Claude AI → Structured Markdown → Parsed Recipes
+ *
+ * Why Claude: Native PDF support and strong Italian language understanding make it ideal
+ * for extracting structured recipe data from Italian cookbook PDFs.
+ *
+ * Architecture: Two-phase AI workflow
+ * 1. Extraction: Claude analyzes PDF and outputs markdown-formatted recipes
+ * 2. Categorization: (In frontend) Parse markdown and suggest categories/seasons per recipe
+ */
+
+// This prompt is the AI instruction sent to Claude (not code documentation).
+// Optimized through extensive testing with Italian recipe PDFs to solve:
+// - Index page detection (skip index, extract actual recipes)
+// - Section name preservation (exact names without abbreviation)
+// - Variable recipe structures (2-6+ sections per recipe)
 const EXTRACTION_PROMPT = `Analizza il PDF allegato ed estrai **TUTTE le ricette presenti** nel documento.
 
 **Fornisci il risultato completo formattando ogni ricetta secondo questa struttura:
@@ -105,6 +123,15 @@ const EXTRACTION_PROMPT = `Analizza il PDF allegato ed estrai **TUTTE le ricette
 
 ---`;
 
+/**
+ * Italian Seasonal Ingredients Classification
+ *
+ * Based on traditional Italian culinary calendar and ingredient availability.
+ * Used by AI to suggest appropriate season tags for recipes.
+ *
+ * Each season contains ingredients that are traditionally at their peak
+ * freshness and availability during that time in Italy.
+ */
 const ITALIAN_SEASONAL_INGREDIENTS = {
   primavera: ['asparagi', 'carciofi', 'fave', 'piselli', 'fragole', 'agretti', 'rucola', 'ravanelli', 'cipollotti', 'lattuga'],
   estate: ['pomodori', 'melanzane', 'zucchine', 'peperoni', 'basilico', 'cetrioli', 'pesche', 'albicocche', 'melone', 'anguria', 'fagiolini'],
@@ -112,6 +139,18 @@ const ITALIAN_SEASONAL_INGREDIENTS = {
   inverno: ['cavolo nero', 'cavolfiore', 'finocchi', 'agrumi', 'arance', 'mandarini', 'limoni', 'cime di rapa', 'porri', 'rape']
 };
 
+/**
+ * Builds AI prompt for category and season suggestion.
+ *
+ * @param recipeTitle - Title of the recipe to categorize
+ * @param ingredients - List of ingredients (used for seasonal analysis)
+ * @param userCategories - User's existing categories (for matching consistency)
+ * @returns Structured prompt requesting strict JSON response
+ *
+ * Why JSON: Ensures parseable, structured response vs freeform text.
+ * The AI will match existing categories first to maintain consistency and prevent
+ * category proliferation (e.g., "Dolci" vs "Dessert" vs "Sweets").
+ */
 function createCategorizationPrompt(recipeTitle: string, ingredients: string[], userCategories: { name: string }[]): string {
   const categoryList = userCategories.length > 0
     ? userCategories.map(c => c.name).join(', ')
@@ -142,6 +181,7 @@ ${seasonalInfo}
 - Se la ricetta corrisponde a una categoria esistente, usa ESATTAMENTE quel nome
 - Se non corrisponde a nessuna categoria esistente, proponi un nuovo nome appropriato (es: "Primi piatti", "Dolci", "Secondi piatti", "Antipasti", "Contorni", ecc.)
 - Imposta "isNewCategory" a true solo se proponi una categoria nuova
+  (This prevents category proliferation by using exact string matching)
 
 **Regole per la stagione:**
 - Analizza gli ingredienti principali e determina la stagione più appropriata
@@ -152,6 +192,20 @@ ${seasonalInfo}
 Rispondi SOLO con il JSON, nient'altro.`;
 }
 
+/**
+ * Suggests category and season for a recipe using Claude AI.
+ *
+ * @param anthropic - Anthropic SDK client instance
+ * @param recipeTitle - Title of the recipe
+ * @param ingredients - List of ingredient names
+ * @param userCategories - User's existing categories
+ * @returns Object with categoryName, season, and isNewCategory flag, or null on error
+ *
+ * Logic: Matches existing categories first for consistency. If no match, suggests new category.
+ * The isNewCategory flag tells the frontend whether to create a new category or use existing.
+ *
+ * Error handling: Returns null on failure, allowing frontend to handle gracefully.
+ */
 async function suggestCategoryAndSeason(
   anthropic: Anthropic,
   recipeTitle: string,
@@ -192,6 +246,19 @@ async function suggestCategoryAndSeason(
   }
 }
 
+/**
+ * POST /api/extract-recipes
+ *
+ * Handles PDF upload and extracts recipes using Claude AI with native PDF support.
+ *
+ * Validation:
+ * - File must be PDF (application/pdf)
+ * - Max size: 4.4MB (Vercel serverless limit)
+ *
+ * Returns: Markdown-formatted recipes ready for parsing by recipe-parser.ts
+ *
+ * Side effects: None (stateless API endpoint)
+ */
 export async function POST(request: NextRequest) {
   try {
     const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -232,7 +299,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate file size (max 4.4MB - Vercel limit)
+    // Validate file size (max 4.4MB to stay within Vercel's 4.5MB serverless limit)
+    // We use 4.4MB to leave buffer for HTTP headers and request metadata.
     const maxSize = 4.4 * 1024 * 1024; // 4.4MB
     if (file.size > maxSize) {
       return NextResponse.json(

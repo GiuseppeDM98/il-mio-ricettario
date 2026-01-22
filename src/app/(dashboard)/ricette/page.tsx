@@ -10,6 +10,23 @@ import { getUserCategories, getCategorySubcategories } from '@/lib/firebase/cate
 import { Category, Subcategory, Season } from '@/types';
 import Link from 'next/link';
 
+/**
+ * Recipe List Page - Cascading Filter Architecture
+ *
+ * Three-level filtering: Season → Category → Subcategory
+ * - Season filter: Independent (all recipes)
+ * - Category filter: Narrows season results
+ * - Subcategory filter: Narrows category results (depends on category selection)
+ *
+ * Dependency chain: Subcategory availability dynamically updates based on selected category.
+ *
+ * Performance: useMemo memoizes filtered results to prevent unnecessary recalculations
+ * on large recipe lists. Re-runs only when recipes or filter selections change.
+ *
+ * Data loading: Eager load all categories/subcategories for instant filter response
+ * (trade-off: slightly slower initial load for better UX).
+ */
+
 const SEASON_ICONS: Record<Season, string> = {
   primavera: '🌸',
   estate: '☀️',
@@ -26,6 +43,13 @@ const SEASON_LABELS: Record<Season, string> = {
   tutte_stagioni: 'Tutte le stagioni'
 };
 
+/**
+ * Recipe list with three-level filtering (season, category, subcategory).
+ *
+ * Performance: useMemo memoizes filtered results to avoid recalculation.
+ * Data loading: Eager load all categories/subcategories upfront (not lazy)
+ * for instant filter response without loading delays.
+ */
 export default function RecipesPage() {
   const { recipes, loading, error } = useRecipes();
   const { user } = useAuth();
@@ -35,6 +59,10 @@ export default function RecipesPage() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('all');
   const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string>('all');
 
+  // Load ALL subcategories upfront (not lazy) because:
+  // - Filter UI needs complete subcategory list for all categories
+  // - User expects instant filter response without loading delays
+  // - Trade-off: Slightly slower initial load for better UX
   useEffect(() => {
     const loadCategoriesData = async () => {
       if (!user) return;
@@ -58,7 +86,17 @@ export default function RecipesPage() {
     loadCategoriesData();
   }, [user]);
 
-  // Filter recipes by season, category, and subcategory
+  /**
+   * Applies cascading filters in order (season → category → subcategory).
+   *
+   * Cascading filter pattern: Each filter depends on previous ones.
+   * Season is independent, category narrows season results,
+   * subcategory narrows category results.
+   *
+   * This is more efficient than re-filtering from full list each time.
+   *
+   * Dependencies: Re-runs only when recipes or filter selections change.
+   */
   const filteredRecipes = useMemo(() => {
     let filtered = recipes;
 
@@ -80,7 +118,13 @@ export default function RecipesPage() {
     return filtered;
   }, [recipes, selectedSeason, selectedCategoryId, selectedSubcategoryId]);
 
-  // Get subcategories for the selected category
+  /**
+   * Dynamically filters subcategories based on selected category.
+   *
+   * Why: Prevents user from selecting subcategories from wrong category.
+   *
+   * Returns: All subcategories if no category selected, filtered otherwise.
+   */
   const availableSubcategories = useMemo(() => {
     if (selectedCategoryId === 'all') {
       return subcategories;
@@ -88,7 +132,10 @@ export default function RecipesPage() {
     return subcategories.filter(sub => sub.categoryId === selectedCategoryId);
   }, [subcategories, selectedCategoryId]);
 
-  // Reset subcategory when category changes
+  // Reset subcategory filter when category changes because:
+  // 1. Selected subcategory might not belong to new category
+  // 2. Showing "all subcategories" for new category is clearer UX
+  // The check (currentSubInNewCat) preserves selection if it's still valid.
   useEffect(() => {
     if (selectedCategoryId === 'all') {
       setSelectedSubcategoryId('all');
@@ -124,7 +171,7 @@ export default function RecipesPage() {
         </Button>
       </div>
 
-      {/* Category and Subcategory Filters */}
+      {/* === CATEGORY/SUBCATEGORY FILTERS === */}
       <div className="mb-6 space-y-4">
         <div className="flex flex-col sm:flex-row gap-4">
           {/* Category Dropdown */}
@@ -180,7 +227,7 @@ export default function RecipesPage() {
         </div>
       </div>
 
-      {/* Season Filter */}
+      {/* === SEASON FILTER === */}
       <div className="mb-6">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm font-medium text-gray-700">Filtra per stagione:</span>
@@ -214,6 +261,7 @@ export default function RecipesPage() {
         </div>
       </div>
 
+      {/* === RECIPE GRID === */}
       {recipes.length === 0 ? (
         <div className="text-center py-12 border-2 border-dashed rounded-lg">
           <h3 className="text-xl font-semibold">Nessuna ricetta trovata</h3>

@@ -34,6 +34,7 @@ yarn-error.log*
 .firebase/
 firebase-debug.log
 *-debug.log
+service-account-key.json
 
 # vercel
 .vercel

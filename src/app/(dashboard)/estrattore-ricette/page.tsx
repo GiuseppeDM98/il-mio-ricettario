@@ -14,6 +14,20 @@ import { AlertCircle, CheckCircle2, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Category, Season } from '@/types';
 
+/**
+ * Recipe Extractor Page - Multi-Step AI Extraction Workflow
+ *
+ * Workflow: Upload → Extract → Preview → Save
+ * 1. User uploads PDF file
+ * 2. Claude API extracts recipes (markdown format)
+ * 3. AI suggests categories/seasons for each recipe
+ * 4. User reviews and saves individually or in bulk
+ *
+ * State management: Per-recipe saving states for bulk operations (optimistic UI).
+ *
+ * Feature gating: Test account blocked from AI to protect API costs.
+ * Test account can still browse and use all other features.
+ */
 export default function RecipeExtractorPage() {
   const router = useRouter();
   const { user } = useAuth();
@@ -25,7 +39,10 @@ export default function RecipeExtractorPage() {
   const [error, setError] = useState<string | null>(null);
   const [userCategories, setUserCategories] = useState<Category[]>([]);
 
-  // Check if user is test account (AI disabled for test account)
+  // Test account is blocked from AI extraction because:
+  // - Prevents API cost abuse on publicly accessible demo account
+  // - Users can still browse and test all other features
+  // Real users have full AI access.
   const isTestAccount = user?.email === 'test@test.com';
 
   // Load user categories on mount
@@ -43,6 +60,15 @@ export default function RecipeExtractorPage() {
     loadCategories();
   }, [user]);
 
+  /**
+   * Uploads PDF and processes extracted recipes.
+   *
+   * Validation: Blocks test account, file type/size checks (handled by API).
+   *
+   * Post-processing: Fetches AI suggestions for each recipe in parallel (Promise.all).
+   *
+   * Side effects: Multiple API calls (1 extraction + N category suggestions)
+   */
   const handleFileSelected = async (file: File) => {
     if (!user) {
       toast.error('Devi effettuare il login per usare questa funzionalità');
@@ -89,7 +115,11 @@ export default function RecipeExtractorPage() {
         throw new Error('Non è stato possibile estrarre ricette valide dal PDF');
       }
 
-      // Get AI suggestions for each recipe
+      // Two-phase AI workflow:
+      // Phase 1: Extract recipes (Claude PDF analysis) → returns markdown
+      // Phase 2: Suggest categories (Claude text analysis) → one call per recipe
+      // Phase 2 is parallelized (Promise.all) for speed.
+      // Total AI calls: 1 extraction + N suggestions (N = number of recipes)
       toast.success(`${parsedRecipes.length} ricett${parsedRecipes.length === 1 ? 'a estratta' : 'e estratte'}! Ottenimento suggerimenti AI...`);
 
       const recipesWithSuggestions = await Promise.all(
@@ -117,6 +147,16 @@ export default function RecipeExtractorPage() {
     }
   };
 
+  /**
+   * Saves individual recipe with category creation if needed.
+   *
+   * @param recipe - Parsed recipe data
+   * @param categoryName - Creates category if missing
+   * @param season - Season tag for recipe
+   * @param index - Recipe index for state tracking
+   *
+   * Side effects: Firebase recipe write, potential category creation, category list refresh
+   */
   const handleSaveRecipe = async (recipe: ParsedRecipe, categoryName: string, season: Season, index: number) => {
     if (!user) return;
 
@@ -160,7 +200,10 @@ export default function RecipeExtractorPage() {
       setSavedStates(prev => new Set(prev).add(index));
       toast.success(`"${recipe.title}" salvata con successo!`);
 
-      // Refresh categories if a new one was created
+      // Reload categories after saving because:
+      // - createCategoryIfNotExists might have created a new category
+      // - Next recipe save needs updated category list for AI matching
+      // - User expects newly created categories to appear immediately
       const updatedCategories = await getUserCategories(user.uid);
       setUserCategories(updatedCategories);
     } catch (error) {
@@ -176,9 +219,25 @@ export default function RecipeExtractorPage() {
     }
   };
 
+  /**
+   * Bulk saves all unsaved recipes with AI-suggested metadata.
+   *
+   * Logic: Saves sequentially (await in loop) instead of Promise.all to avoid
+   * Firebase write rate limits per user. Sequential saves are more reliable
+   * for bulk operations.
+   *
+   * State: Marks each recipe as saved progressively (optimistic UI with
+   * per-recipe saving states).
+   *
+   * Progress feedback: Saves appear one by one (clearer than all at once).
+   */
   const handleSaveAll = async () => {
     if (!user || extractedRecipes.length === 0) return;
 
+    // Save recipes sequentially (await in loop) instead of Promise.all because:
+    // - Firebase has write rate limits per user
+    // - Sequential saves are more reliable for bulk operations
+    // - Progress feedback is clearer (saves appear one by one)
     for (let i = 0; i < extractedRecipes.length; i++) {
       if (!savedStates.has(i)) {
         const recipe = extractedRecipes[i];

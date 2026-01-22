@@ -9,13 +9,37 @@ import { MoreSheet } from '@/components/layout/more-sheet';
 import { Footer } from '@/components/layout/footer';
 import { cn } from '@/lib/utils/cn';
 
+/**
+ * Dashboard Layout - Responsive Navigation with Orientation Detection
+ *
+ * Three navigation modes based on viewport:
+ * 1. Desktop (≥1440px): Persistent sidebar always visible
+ * 2. Portrait (mobile vertical): Bottom navigation for thumb reach
+ * 3. Landscape (mobile horizontal): Hamburger menu for grip comfort
+ *
+ * Why orientation-based: Touch-optimized UIs differ between portrait (thumbs)
+ * and landscape (grip). This provides optimal UX for each orientation.
+ *
+ * Breakpoint: 1440px chosen because below this, sidebar takes too much
+ * horizontal space. Aligns with common laptop screen widths.
+ *
+ * See AGENTS.md for navigation breakpoint gotchas (max-lg:portrait: pattern).
+ */
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [moreSheetOpen, setMoreSheetOpen] = useState(false);
 
-  // Reset states on viewport change
+  // Reset sidebar/sheet states when viewport changes to prevent:
+  // - Stuck-open sidebar when rotating to portrait
+  // - Stuck-open sheet when rotating to landscape
+  // Each navigation mode is exclusive to its viewport range.
   useEffect(() => {
     const handleResize = () => {
+      // Close sidebar on desktop (≥1440px) or portrait mode.
+      // Tailwind orientation variants detect device physical orientation:
+      // - portrait: device held vertically (bottom nav for thumb reach)
+      // - landscape: device held horizontally (hamburger menu for grip)
+      // Desktop (≥1440px) always shows sidebar regardless of orientation.
       if (window.innerWidth >= 1440 || window.matchMedia('(orientation: portrait)').matches) {
         setSidebarOpen(false);
       }

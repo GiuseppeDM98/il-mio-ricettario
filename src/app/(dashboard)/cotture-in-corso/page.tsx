@@ -11,15 +11,45 @@ import { Card } from '@/components/ui/card';
 import Link from 'next/link';
 import { Trash2, ChefHat } from 'lucide-react';
 
+/**
+ * Active Cooking Sessions Dashboard
+ *
+ * Data pattern: Enrichment (sessions + joined recipe data)
+ * - Sessions store only recipeId, not full recipe details
+ * - We fetch recipe details separately to prevent data duplication
+ * - Single source of truth: Recipe might be updated independently
+ *
+ * Why manual join: Firebase doesn't support joins, so we fetch related data
+ * using Promise.all for parallel requests.
+ *
+ * Actions: Resume cooking or delete session
+ */
+
 interface CookingSessionWithRecipe extends CookingSession {
   recipe?: Recipe;
 }
 
+/**
+ * Dashboard showing all active cooking sessions with progress tracking.
+ *
+ * Data loading: Fetches sessions then enriches with recipe details in parallel.
+ *
+ * Actions: Resume cooking (navigate to cooking mode) or delete session.
+ */
 export default function CottureInCorsoPage() {
   const { user } = useAuth();
   const [sessions, setSessions] = useState<CookingSessionWithRecipe[]>([]);
   const [loading, setLoading] = useState(true);
 
+  /**
+   * Fetches user cooking sessions and enriches with recipe data.
+   *
+   * Data join: Uses Promise.all to fetch all recipes in parallel for performance.
+   *
+   * Why manual join: Firebase doesn't support joins natively. Sessions store
+   * only recipeId to keep session documents small and prevent data duplication.
+   * Recipe details might be updated independently, so we fetch fresh data.
+   */
   const loadSessions = async () => {
     if (!user) return;
 
@@ -27,7 +57,11 @@ export default function CottureInCorsoPage() {
     try {
       const userSessions = await getUserCookingSessions(user.uid);
 
-      // Fetch recipe details for each session
+      // Sessions store only recipeId, not full recipe data.
+      // Reasons:
+      // - Prevents data duplication (recipe might be updated)
+      // - Keeps session documents small
+      // - Single source of truth for recipe data
       const sessionsWithRecipes = await Promise.all(
         userSessions.map(async (session) => {
           const recipe = await getRecipe(session.recipeId, user.uid);
@@ -65,6 +99,16 @@ export default function CottureInCorsoPage() {
     }
   };
 
+  /**
+   * Computes completion percentage from checked items.
+   *
+   * Formula: (checkedIngredients + checkedSteps) / (totalIngredients + totalSteps) * 100
+   *
+   * Progress = completed items / total items. Both ingredients and steps count equally.
+   * Example: Recipe with 10 ingredients + 5 steps = 15 total items.
+   *
+   * Returns: Rounded integer percentage (0-100) for display.
+   */
   const calculateProgress = (session: CookingSessionWithRecipe) => {
     if (!session.recipe) return 0;
 
@@ -90,6 +134,7 @@ export default function CottureInCorsoPage() {
         <h1 className="text-3xl font-bold">Cotture in Corso</h1>
       </div>
 
+      {/* === EMPTY STATE === */}
       {sessions.length === 0 ? (
         <Card className="p-12 text-center">
           <ChefHat className="w-16 h-16 mx-auto mb-4 text-gray-400" />
@@ -104,6 +149,7 @@ export default function CottureInCorsoPage() {
           </Button>
         </Card>
       ) : (
+        /* === SESSION CARDS === */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {sessions.map((session) => {
             const progress = calculateProgress(session);

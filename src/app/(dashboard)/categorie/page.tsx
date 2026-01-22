@@ -28,6 +28,20 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 
+/**
+ * Category Management Page - Complex CRUD with Nested Subcategories
+ *
+ * Architecture: Lazy loading pattern for subcategories to reduce initial load time.
+ * - Categories: Loaded eagerly on page mount
+ * - Subcategories: Loaded lazily when category is expanded
+ *
+ * State management: 4 concurrent dialog workflows (create, edit, delete, add subcategory).
+ * Each dialog has independent state because they can't be open simultaneously (modal blocking),
+ * each carries different data, and cleanup timing differs.
+ *
+ * Why lazy loading: With many categories, loading all subcategories upfront would be slow.
+ * Lazy loading provides instant page load with data fetched only when needed.
+ */
 export default function GestioneCategoriePage() {
   const { user } = useAuth();
   const [categories, setCategories] = useState<Category[]>([]);
@@ -38,6 +52,10 @@ export default function GestioneCategoriePage() {
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [deletingCategory, setDeletingCategory] = useState<Category | null>(null);
   const [expandedCategoryId, setExpandedCategoryId] = useState<string | null>(null);
+  // WARNING: If you modify subcategory structure, also update:
+  // - getCategorySubcategories() in lib/firebase/categories.ts
+  // - Subcategory type in types/index.ts
+  // - Subcategory display in RecipeCard component
   const [subcategories, setSubcategories] = useState<Record<string, Subcategory[]>>({});
   const [newSubcategoryName, setNewSubcategoryName] = useState('');
   const [addingSubcategoryTo, setAddingSubcategoryTo] = useState<string | null>(null);
@@ -58,6 +76,13 @@ export default function GestioneCategoriePage() {
     }
   };
 
+  /**
+   * Fetches subcategories for a specific category on demand.
+   *
+   * Why lazy: Performance optimization - only load when category is expanded.
+   *
+   * Side effects: Updates subcategories map with categoryId as key.
+   */
   const loadSubcategories = async (categoryId: string) => {
     if (!user) return;
     try {
@@ -74,6 +99,9 @@ export default function GestioneCategoriePage() {
     }
   }, [user]);
 
+  // Load subcategories only when category is expanded.
+  // Prevents unnecessary Firebase queries on page load.
+  // Cache check (!subcategories[expandedCategoryId]) avoids duplicate fetches.
   useEffect(() => {
     if (expandedCategoryId && !subcategories[expandedCategoryId]) {
       loadSubcategories(expandedCategoryId);
@@ -103,10 +131,20 @@ export default function GestioneCategoriePage() {
     }
   };
 
+  /**
+   * Prepares delete confirmation dialog with subcategory impact warning.
+   *
+   * Why separate function: Must pre-load subcategory count before showing dialog
+   * to warn user about cascade deletion impact.
+   *
+   * Side effects: Firebase count query, state updates
+   */
   const handleOpenDeleteDialog = async (category: Category) => {
     if (!user) return;
     setDeletingCategory(category);
-    // Count subcategories
+    // Pre-load count to warn user about cascade deletion impact.
+    // Firebase rules will cascade delete subcategories automatically,
+    // but user needs to know how many will be deleted.
     const count = await countSubcategories(category.id, user.uid);
     setSubcategoryCount(count);
   };
@@ -143,6 +181,13 @@ export default function GestioneCategoriePage() {
     }
   };
 
+  /**
+   * Expands/collapses category to show/hide subcategories (accordion pattern).
+   *
+   * Triggers: Lazy load via useEffect if subcategories not cached.
+   *
+   * State: Single expanded category at a time (clicking same category collapses it).
+   */
   const toggleCategory = (categoryId: string) => {
     setExpandedCategoryId(prev => prev === categoryId ? null : categoryId);
   };
@@ -245,7 +290,7 @@ export default function GestioneCategoriePage() {
         </form>
       </Card>
 
-      {/* Category List */}
+      {/* === CATEGORY LIST === */}
       {categories.length === 0 ? (
         <Card className="p-12 text-center">
           <p className="text-gray-500">Nessuna categoria trovata</p>
@@ -381,7 +426,7 @@ export default function GestioneCategoriePage() {
         </div>
       )}
 
-      {/* Edit Dialog */}
+      {/* === EDIT CATEGORY DIALOG === */}
       <Dialog open={!!editingCategory} onOpenChange={(open) => !open && setEditingCategory(null)}>
         <DialogContent>
           <DialogHeader>
@@ -432,7 +477,7 @@ export default function GestioneCategoriePage() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
+      {/* === DELETE CATEGORY DIALOG === */}
       <Dialog open={!!deletingCategory} onOpenChange={(open) => {
         if (!open) {
           setDeletingCategory(null);
@@ -466,7 +511,7 @@ export default function GestioneCategoriePage() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Subcategory Dialog */}
+      {/* === EDIT SUBCATEGORY DIALOG === */}
       <Dialog open={!!editingSubcategory} onOpenChange={(open) => !open && setEditingSubcategory(null)}>
         <DialogContent>
           <DialogHeader>
@@ -500,7 +545,7 @@ export default function GestioneCategoriePage() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Subcategory Confirmation Dialog */}
+      {/* === DELETE SUBCATEGORY DIALOG === */}
       <Dialog open={!!deletingSubcategory} onOpenChange={(open) => !open && setDeletingSubcategory(null)}>
         <DialogContent>
           <DialogHeader>

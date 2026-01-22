@@ -19,6 +19,23 @@ import { ArrowLeft, Plus, Minus } from 'lucide-react';
 import NoSleep from 'nosleep.js';
 import { scaleQuantity } from '@/lib/utils/ingredient-scaler';
 
+/**
+ * Cooking Mode Page - Two-Phase Cooking Workflow
+ *
+ * Architecture: Setup Mode → Cooking Mode
+ * - Setup mode: User selects servings before starting
+ * - Cooking mode: Active cooking with ingredient/step tracking
+ *
+ * Why this approach: Prevents duplicate session creation compared to useEffect-based approach.
+ * If session exists (e.g., page refresh), skip setup and go straight to cooking mode.
+ *
+ * Key Features:
+ * - NoSleep integration: Keeps screen awake during cooking
+ * - Ingredient scaling: Real-time quantity adjustment with Italian decimal format (1,5 kg)
+ * - Auto-deletion: Session automatically deleted at 100% completion
+ *
+ * Side effects: Firebase session CRUD, navigation on completion
+ */
 export default function CookingModePage() {
   const { id } = useParams();
   const { user } = useAuth();
@@ -34,6 +51,8 @@ export default function CookingModePage() {
   const [scaledIngredients, setScaledIngredients] = useState<Ingredient[]>([]);
   const [isSetupMode, setIsSetupMode] = useState(true); // Start in setup mode
 
+  // Keep device screen awake during cooking to prevent recipe from disappearing
+  // while user is actively following steps (often with messy hands).
   useEffect(() => {
     const noSleep = new NoSleep();
 
@@ -64,7 +83,8 @@ export default function CookingModePage() {
           // Check if a session already exists
           const session = await getCookingSession(id as string, user.uid);
           if (session) {
-            // Session exists - load it and skip setup mode
+            // Session exists - skip setup mode and go straight to cooking.
+            // This prevents duplicate session creation if user refreshes the page.
             setCookingSession(session);
             setCheckedIngredients(session.checkedIngredients);
             setCheckedSteps(session.checkedSteps);
@@ -84,7 +104,10 @@ export default function CookingModePage() {
     }
   }, [id, user]);
 
-  // Scale ingredients when servings change
+  // Scale ingredients when servings change.
+  // Italian number format uses comma as decimal separator (1,5 kg not 1.5 kg).
+  // The scaleQuantity utility handles this conversion automatically.
+  // See: src/lib/utils/ingredient-scaler.ts for scaling algorithm.
   useEffect(() => {
     if (recipe && servings > 0) {
       const originalServings = recipe.servings || 4;
@@ -98,6 +121,13 @@ export default function CookingModePage() {
     }
   }, [recipe, servings]);
 
+  /**
+   * Creates cooking session and switches from setup mode to cooking mode.
+   *
+   * Called only from setup screen to prevent duplicate session creation.
+   *
+   * Side effects: Firebase session write, state updates (session, mode)
+   */
   const handleStartCooking = async () => {
     if (!user || !id) return;
 
@@ -122,12 +152,21 @@ export default function CookingModePage() {
     }
   };
 
+  /**
+   * Updates servings with real-time ingredient scaling.
+   *
+   * @param newServings - New servings count (1-99 range enforced)
+   *
+   * Side effects: Updates Firebase only if session exists (cooking mode).
+   * In setup mode, servings are local state until session is created.
+   */
   const handleServingsChange = async (newServings: number) => {
     if (newServings < 1 || newServings > 99) return; // Reasonable limits
 
     setServings(newServings);
 
-    // Update cooking session only if we're already in cooking mode
+    // Update Firebase only if we're in cooking mode (session exists).
+    // In setup mode, servings remain local state until session is created.
     if (cookingSession && !isSetupMode) {
       try {
         await updateCookingSession(cookingSession.id, {
@@ -139,6 +178,11 @@ export default function CookingModePage() {
     }
   };
 
+  /**
+   * Toggles ingredient completion status and auto-deletes session at 100%.
+   *
+   * Side effects: Firebase update, potential session deletion and redirect to /cotture-in-corso
+   */
   const handleToggleIngredient = async (ingredientId: string) => {
     if (!cookingSession || !recipe) return;
 
@@ -153,7 +197,9 @@ export default function CookingModePage() {
         checkedIngredients: newCheckedIngredients,
       });
 
-      // Check if cooking is complete (100% progress)
+      // Check if cooking is complete (100% progress).
+      // Auto-delete session at 100% to keep sessions list clean.
+      // User is automatically redirected to cooking sessions page.
       const totalItems = recipe.ingredients.length + recipe.steps.length;
       const checkedItems = newCheckedIngredients.length + checkedSteps.length;
       const progress = totalItems > 0 ? checkedItems / totalItems : 0;
@@ -168,6 +214,13 @@ export default function CookingModePage() {
     }
   };
 
+  /**
+   * Toggles step completion status and auto-deletes session at 100%.
+   *
+   * Note: Identical progress logic to handleToggleIngredient.
+   *
+   * Side effects: Firebase update, potential session deletion and redirect to /cotture-in-corso
+   */
   const handleToggleStep = async (stepId: string) => {
     if (!cookingSession || !recipe) return;
 
@@ -182,7 +235,9 @@ export default function CookingModePage() {
         checkedSteps: newCheckedSteps,
       });
 
-      // Check if cooking is complete (100% progress)
+      // Check if cooking is complete (100% progress).
+      // Auto-delete session at 100% to keep sessions list clean.
+      // User is automatically redirected to cooking sessions page.
       const totalItems = recipe.ingredients.length + recipe.steps.length;
       const checkedItems = checkedIngredients.length + newCheckedSteps.length;
       const progress = totalItems > 0 ? checkedItems / totalItems : 0;
@@ -211,7 +266,8 @@ export default function CookingModePage() {
 
   const originalServings = recipe.servings || 4;
 
-  // Setup mode - shown before cooking starts
+  // === SETUP MODE RENDER ===
+  // Pre-cooking configuration: user selects servings before starting.
   if (isSetupMode) {
     return (
       <div className="p-4 sm:p-6 lg:p-8">
@@ -293,7 +349,8 @@ export default function CookingModePage() {
     );
   }
 
-  // Cooking mode - shown after setup is complete
+  // === COOKING MODE RENDER ===
+  // Active cooking: ingredient/step tracking with progress and auto-deletion at 100%.
   return (
     <div className="p-4 sm:p-6 lg:p-8 text-xl">
       <div className="flex items-center mb-6">
