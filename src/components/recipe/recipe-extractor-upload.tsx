@@ -4,6 +4,18 @@ import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Upload, FileText, X } from 'lucide-react';
 
+/**
+ * RecipeExtractorUpload - Drag-and-drop PDF file upload with size validation
+ *
+ * PURPOSE: Upload PDF files for AI recipe extraction
+ *
+ * FEATURES:
+ * - Drag-and-drop zone with visual feedback
+ * - File size validation (4.4MB Vercel limit)
+ * - PDF-only validation
+ * - User-friendly error messages with compression tool suggestions
+ */
+
 interface RecipeExtractorUploadProps {
   onFileSelected: (file: File) => void;
   isLoading?: boolean;
@@ -15,9 +27,15 @@ export function RecipeExtractorUpload({ onFileSelected, isLoading, disabled }: R
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // ========================================
+  // Drag and drop event handlers
+  // ========================================
+  // Standard HTML5 drag-drop API pattern
+
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    // Track drag state for visual feedback (border highlight)
     if (e.type === 'dragenter' || e.type === 'dragover') {
       setDragActive(true);
     } else if (e.type === 'dragleave') {
@@ -30,6 +48,7 @@ export function RecipeExtractorUpload({ onFileSelected, isLoading, disabled }: R
     e.stopPropagation();
     setDragActive(false);
 
+    // Validate: Only accept PDF files
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const file = e.dataTransfer.files[0];
       if (file.type === 'application/pdf') {
@@ -48,7 +67,18 @@ export function RecipeExtractorUpload({ onFileSelected, isLoading, disabled }: R
   };
 
   const handleFileSelection = (file: File) => {
-    // Check file size (max 4.4MB - Vercel limit)
+    // ========================================
+    // Check file size (max 4.4MB due to Vercel serverless function limits)
+    // ========================================
+    //
+    // WHY 4.4MB:
+    // - Vercel free tier: 4.5MB request payload limit
+    // - Leave 100KB buffer for base64 encoding + request overhead
+    // - Vercel docs: https://vercel.com/docs/concepts/limits/overview
+    //
+    // USER GUIDANCE:
+    // - Error message includes compression tool suggestions
+    // - Tools tested: iLovePDF (free, reliable), Adobe, Smallpdf
     const maxSize = 4.4 * 1024 * 1024;
     if (file.size > maxSize) {
       alert(

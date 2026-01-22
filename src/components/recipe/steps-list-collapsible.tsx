@@ -4,6 +4,24 @@ import { useState } from 'react';
 import { Step } from '@/types';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 
+/**
+ * StepsListCollapsible - Step viewer with global numbering across sections
+ *
+ * KEY FEATURE: Global step counter
+ * - Steps are numbered 1, 2, 3... globally across all sections
+ * - Counter continues even when sections are collapsed
+ * - Challenge: Counter must increment even for hidden steps
+ *
+ * SECTION ORDERING:
+ * - Null section (no section): Always first
+ * - Named sections: Sorted by sectionOrder field (preserved from PDF extraction)
+ * - sectionOrder tracks original document order
+ *
+ * INTERACTION MODES:
+ * - static: Display only (recipe view)
+ * - interactive: Checkboxes for cooking mode (track progress)
+ */
+
 interface StepsListCollapsibleProps {
   steps: Step[];
   defaultExpanded?: boolean;
@@ -24,7 +42,25 @@ export function StepsListCollapsible({
   checkedSteps = [],
   onToggleStep,
 }: StepsListCollapsibleProps) {
-  // Group steps by section
+  // ========================================
+  // Group steps by section and sort by original document order
+  // ========================================
+  //
+  // ALGORITHM:
+  // 1. Group by section field (null = no section)
+  // 2. Convert Map → array of GroupedSteps
+  // 3. Sort: null section first, then by sectionOrder (PDF extraction order)
+  //
+  // WHY sectionOrder:
+  // - PDF extractor assigns sectionOrder to preserve document structure
+  // - Multiple steps in same section share same sectionOrder
+  // - Allows grouping by section while maintaining original sequence
+  //
+  // Example:
+  //   Step 1: section=null, sectionOrder=null         → group 1 (renders first)
+  //   Step 2: section="Per la pasta", sectionOrder=1  → group 2
+  //   Step 3: section="Per la pasta", sectionOrder=1  → group 2
+  //   Step 4: section="Per il sugo", sectionOrder=2   → group 3
   const groupedSteps: GroupedSteps[] = [];
   const stepsBySection = new Map<string | null, Step[]>();
 
@@ -36,17 +72,17 @@ export function StepsListCollapsible({
     stepsBySection.get(section)!.push(step);
   });
 
-  // Convert to array and sort: null section first, then by order
+  // Convert to array
   stepsBySection.forEach((steps, section) => {
     groupedSteps.push({ section, steps });
   });
 
-  // Sort: null section first, then by section order (original PDF order)
+  // Sort: null section first, then by sectionOrder
   groupedSteps.sort((a, b) => {
     if (a.section === null) return -1;
     if (b.section === null) return 1;
 
-    // Get the minimum sectionOrder from each group (all steps in a section should have the same sectionOrder)
+    // Get sectionOrder from first step (all steps in group share same sectionOrder)
     const orderA = a.steps[0]?.sectionOrder ?? 999;
     const orderB = b.steps[0]?.sectionOrder ?? 999;
 
@@ -68,7 +104,16 @@ export function StepsListCollapsible({
     setExpandedSections(newExpanded);
   };
 
-  // Calculate global step numbers
+  // ========================================
+  // Global step numbering across all sections
+  // ========================================
+  //
+  // CRITICAL: Counter must increment even for collapsed sections
+  // - User sees "1, 2, 3..." for expanded steps
+  // - Collapsed sections still consume numbers (prevents renumbering on expand)
+  // - Example: Section A (steps 1-3), Section B collapsed (steps 4-5), Section C (steps 6-7)
+  //
+  // Implementation: Single counter variable incremented during render
   let globalStepNumber = 0;
 
   return (
@@ -210,10 +255,12 @@ export function StepsListCollapsible({
               </div>
             )}
 
-            {/* Reserve space for collapsed step numbers */}
+            {/* Reserve numbers for collapsed section steps */}
+            {/* WHY: Prevents step numbers from changing when user expands/collapses */}
+            {/* Example: If steps 4-5 are hidden, step 6 stays 6 (doesn't become 4) */}
             {!isExpanded && (() => {
               group.steps.forEach(() => globalStepNumber++);
-              return null;
+              return null; // No render, just increment counter
             })()}
           </div>
         );

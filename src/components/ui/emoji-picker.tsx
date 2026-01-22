@@ -11,6 +11,16 @@ import {
   DialogTrigger,
 } from './dialog';
 
+/**
+ * Emoji category structure for category icon selection
+ *
+ * STRUCTURE:
+ * - Each category: label, icon (tab indicator), emojis (selectable options)
+ * - Categories: Food-focused (Italian recipe app)
+ * - Expandable: Add new categories by extending this object
+ *
+ * USAGE: Category management page (select icons for recipe categories)
+ */
 const EMOJI_CATEGORIES = {
   cibo: {
     label: 'Cibo',
@@ -70,7 +80,8 @@ export function EmojiPicker({ value, onSelect, className }: EmojiPickerProps) {
 
   const handleEmojiSelect = (emoji: string) => {
     onSelect(emoji);
-    setOpen(false);
+    setOpen(false); // Auto-close dialog after selection
+    // WHY: Selecting emoji completes the action → no need to keep dialog open
   };
 
   return (

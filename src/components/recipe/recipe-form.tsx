@@ -11,6 +11,25 @@ import { v4 as uuidv4 } from 'uuid';
 import { CategorySelector } from './category-selector';
 import { SeasonSelector } from './season-selector';
 
+/**
+ * RecipeForm - Hierarchical ingredient/step editor with flat storage
+ *
+ * ARCHITECTURE:
+ * - UI: Hierarchical structure (sections containing items)
+ * - Storage: Flat arrays with section field pointers
+ * - Challenge: Maintaining section order while allowing free editing
+ *
+ * DATA FLOW:
+ * 1. Load: Flat array → Group by section → Hierarchical UI state
+ * 2. Edit: User modifies hierarchical sections
+ * 3. Save: Hierarchical UI state → Flatten → Store
+ *
+ * TRADE-OFFS:
+ * - Hierarchical UI: Better UX, easier section management
+ * - Flat storage: Simpler queries, no nested Firestore docs
+ * - Cost: Complex transformation logic on mount/save
+ */
+
 interface RecipeFormProps {
   recipe?: Recipe; // For edit mode
   mode: 'create' | 'edit';
@@ -38,8 +57,14 @@ export function RecipeForm({ recipe, mode }: RecipeFormProps) {
   const [season, setSeason] = useState<Season | undefined>(recipe?.season);
   const [loading, setLoading] = useState(false);
 
-  // Gestione sezioni ingredienti
+  // ========================================
+  // Section Management
+  // ========================================
+  // These functions manage the hierarchical section structure in the UI state
+
   const addSection = () => {
+    // Create new empty section with temp ID (not persisted to database)
+    // Temp UUID is for React keys only - sections are identified by name in storage
     const newSection: IngredientSection = {
       id: uuidv4(),
       name: '',
@@ -58,7 +83,11 @@ export function RecipeForm({ recipe, mode }: RecipeFormProps) {
     setIngredientSections(sections => sections.filter(s => s.id !== sectionId));
   };
 
-  // Gestione ingredienti nelle sezioni
+  // ========================================
+  // Ingredient Management
+  // ========================================
+  // These functions manage ingredients within sections
+
   const addIngredientToSection = (sectionId: string) => {
     const newIngredient: Ingredient = {
       id: uuidv4(),
@@ -106,10 +135,23 @@ export function RecipeForm({ recipe, mode }: RecipeFormProps) {
     );
   };
 
-  // Inizializzazione: converti array piatto → struttura gerarchica
+  // ========================================
+  // Initialize: Convert flat ingredient array → hierarchical section structure
+  // ========================================
+  //
+  // ALGORITHM:
+  // 1. Group ingredients by section field (Map<sectionName, Ingredient[]>)
+  // 2. Handle null section (legacy data or default) → "Ingredienti"
+  // 3. Convert Map entries → IngredientSection[] with temp IDs
+  // 4. Sort: "Ingredienti" section always first (default section)
+  //
+  // WHY THIS APPROACH:
+  // - Firebase stores flat arrays (no nested documents for sections)
+  // - UI needs collapsible sections for better UX
+  // - We reconstruct hierarchy client-side from section field
   useEffect(() => {
     if (recipe?.ingredients && recipe.ingredients.length > 0) {
-      // Raggruppa ingredienti per sezione
+      // Group ingredients by section name
       const sectionsMap = new Map<string | null, Ingredient[]>();
 
       recipe.ingredients.forEach(ing => {
@@ -120,28 +162,31 @@ export function RecipeForm({ recipe, mode }: RecipeFormProps) {
         sectionsMap.get(sectionKey)!.push(ing);
       });
 
-      // Converti in array di IngredientSection
+      // Convert Map to array of sections
       const sections: IngredientSection[] = [];
       sectionsMap.forEach((ings, sectionName) => {
         sections.push({
-          id: uuidv4(),
+          id: uuidv4(), // Temporary ID for React keys (not persisted)
+          // Normalize null section to "Ingredienti" (default section name)
           name: sectionName === null ? 'Ingredienti' : sectionName,
           ingredients: ings
         });
       });
 
-      // Ordina: sezione "Ingredienti" (ex null) sempre per prima
+      // Sort sections: "Ingredienti" always first
+      // WHY: Default section should be most accessible for simple recipes
       sections.sort((a, b) => {
         if (a.name === 'Ingredienti') return -1;
         if (b.name === 'Ingredienti') return 1;
-        if (a.name === null) return -1; // Manteniamo il sort per dati vecchi
+        if (a.name === null) return -1; // Legacy null handling (old data might still have null)
         if (b.name === null) return 1;
         return 0;
       });
 
       setIngredientSections(sections);
     } else {
-      // Ricetta nuova: inizializza con sezione "Ingredienti"
+      // New recipe: initialize with default "Ingredienti" section
+      // WHY: Prevents empty state, gives users immediate starting point
       setIngredientSections([{
         id: uuidv4(),
         name: 'Ingredienti',
@@ -176,16 +221,31 @@ export function RecipeForm({ recipe, mode }: RecipeFormProps) {
     try {
       let recipeId = recipe?.id;
 
-      // Converti struttura gerarchica → array piatto di ingredienti
+      // ========================================
+      // Convert hierarchical sections → flat ingredient array for storage
+      // ========================================
+      //
+      // ALGORITHM:
+      // 1. Iterate through all sections
+      // 2. For each ingredient: copy data + attach section name
+      // 3. Empty section names → omit section field (becomes default section)
+      // 4. Return flat array for Firestore
+      //
+      // WHY FLATTEN:
+      // - Firestore doesn't support nested arrays efficiently
+      // - Flat structure enables simpler queries (filter by ingredient name)
+      // - Section grouping is UI concern, not data structure concern
       const flatIngredients: Ingredient[] = [];
 
       ingredientSections.forEach(section => {
         section.ingredients.forEach(ing => {
           const newIngredient: any = { ...ing };
+          // Only add section field if section has a name
+          // Empty section name = default section (no field needed)
           if (section.name && section.name.trim()) {
             newIngredient.section = section.name;
           } else {
-            delete newIngredient.section;
+            delete newIngredient.section; // Explicit removal for clarity
           }
           flatIngredients.push(newIngredient);
         });

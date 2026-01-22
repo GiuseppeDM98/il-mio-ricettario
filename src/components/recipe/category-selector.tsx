@@ -5,6 +5,22 @@ import { getUserCategories, getCategorySubcategories } from '@/lib/firebase/cate
 import { useAuth } from '@/lib/context/auth-context';
 import { Category, Subcategory } from '@/types';
 
+/**
+ * CategorySelector - Cascading category/subcategory dropdowns
+ *
+ * ARCHITECTURE:
+ * - Two-level hierarchy: Categories contain Subcategories
+ * - Dependent loading: Subcategories load only after category selected
+ * - Firestore queries: Two separate collections
+ *
+ * STATE MANAGEMENT:
+ * 1. User auth → Load categories
+ * 2. Category selection → Load subcategories for that category
+ * 3. Category change → Clear subcategory selection (prevent orphaned selection)
+ *
+ * IMPORTANT: categoryId controls subcategory visibility
+ */
+
 interface CategorySelectorProps {
   selectedCategoryId?: string;
   selectedSubcategoryId?: string;
@@ -23,17 +39,25 @@ export function CategorySelector({
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // ========================================
+  // Dependent async loading pattern
+  // ========================================
+
+  // Load categories on user auth
   useEffect(() => {
     if (user) {
       loadCategories();
     }
   }, [user]);
 
+  // Load subcategories when category changes
+  // WHY SEPARATE EFFECT: Subcategories depend on category selection
+  // WARNING: If category changes, subcategory selection must be cleared by parent
   useEffect(() => {
     if (selectedCategoryId) {
       loadSubcategories(selectedCategoryId);
     } else {
-      setSubcategories([]);
+      setSubcategories([]); // Clear subcategories when no category selected
     }
   }, [selectedCategoryId]);
 
@@ -80,6 +104,8 @@ export function CategorySelector({
         </select>
       </div>
 
+      {/* Only show subcategory dropdown if subcategories exist */}
+      {/* WHY: Not all categories have subcategories → avoid empty dropdown */}
       {subcategories.length > 0 && (
         <div>
           <label className="block text-sm font-medium mb-2">Sottocategoria</label>

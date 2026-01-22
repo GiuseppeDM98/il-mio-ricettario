@@ -7,6 +7,21 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { GoogleIcon } from '@/components/ui/google-icon';
 
+/**
+ * AuthForm - Unified login/register form
+ *
+ * PURPOSE: Single component handles both auth flows
+ *
+ * MODES:
+ * - 'login': Email + Password
+ * - 'register': Email + Password + Display Name
+ *
+ * FEATURES:
+ * - Optional Google sign-in button (showGoogleButton prop)
+ * - Error display for Firebase auth errors
+ * - Loading states during async operations
+ */
+
 interface AuthFormProps {
   mode: 'login' | 'register';
   showGoogleButton?: boolean;
@@ -56,6 +71,8 @@ export function AuthForm({ mode, showGoogleButton = true }: AuthFormProps) {
   return (
     <div className="w-full max-w-md space-y-6">
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Display name field only shown in register mode */}
+        {/* WHY: Login doesn't need display name (already set during registration) */}
         {mode === 'register' && (
           <Input
             type="text"

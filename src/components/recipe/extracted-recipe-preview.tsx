@@ -8,6 +8,23 @@ import { ChevronDown, ChevronUp, Check, Clock, Users, Sparkles } from 'lucide-re
 import { Season } from '@/types';
 import { Input } from '@/components/ui/input';
 
+/**
+ * ExtractedRecipePreview - Preview card for AI-extracted recipes
+ *
+ * PURPOSE: Review and edit recipes extracted from PDF before saving
+ *
+ * FEATURES:
+ * - Collapsible preview (summary + full content)
+ * - Edit AI suggestions (category, season)
+ * - Dual grouping: Groups ingredients AND steps by section
+ * - Save button with loading/saved states
+ *
+ * AI SUGGESTIONS:
+ * - Claude suggests category + season based on recipe content
+ * - User can modify before saving
+ * - isNewCategory flag: true if category doesn't exist yet
+ */
+
 interface ExtractedRecipePreviewProps {
   recipe: ParsedRecipe;
   index: number;
@@ -47,20 +64,26 @@ export function ExtractedRecipePreview({
     recipe.aiSuggestion?.season || 'tutte_stagioni'
   );
 
-  // Group ingredients by section
+  // ========================================
+  // Group ingredients and steps by section
+  // ========================================
+  // Both use same pattern: Map<sectionName, items[]> → render by section
+  // WHY: Both need section grouping for preview display
+
+  // Group ingredients by section (null → "Ingredienti")
   const ingredientSections = new Map<string, typeof recipe.ingredients>();
   recipe.ingredients.forEach(ing => {
-    const sectionName = ing.section || 'Ingredienti';
+    const sectionName = ing.section || 'Ingredienti'; // Default section name
     if (!ingredientSections.has(sectionName)) {
       ingredientSections.set(sectionName, []);
     }
     ingredientSections.get(sectionName)!.push(ing);
   });
 
-  // Group steps by section
+  // Group steps by section (null → "Preparazione")
   const stepSections = new Map<string, typeof recipe.steps>();
   recipe.steps.forEach(step => {
-    const sectionName = step.section || 'Preparazione';
+    const sectionName = step.section || 'Preparazione'; // Default section name
     if (!stepSections.has(sectionName)) {
       stepSections.set(sectionName, []);
     }

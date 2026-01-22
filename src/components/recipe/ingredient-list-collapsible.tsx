@@ -4,6 +4,23 @@ import { useState } from 'react';
 import { Ingredient } from '@/types';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 
+/**
+ * IngredientListCollapsible - Section-based ingredient viewer
+ *
+ * SECTION HANDLING:
+ * - Ingredients with section field → Collapsible named sections
+ * - Ingredients without section (null/undefined) → Flat list (no header)
+ * - Null section always renders first (default ingredients)
+ *
+ * RENDERING MODES:
+ * - static (recipe view): Checkmarks, no interaction
+ * - interactive (cooking mode): Checkboxes, track checked ingredients
+ *
+ * SORTING:
+ * - Null section: First
+ * - Named sections: Alphabetical (localeCompare)
+ */
+
 interface IngredientListCollapsibleProps {
   ingredients: Ingredient[];
   defaultExpanded?: boolean;
@@ -24,28 +41,40 @@ export function IngredientListCollapsible({
   checkedIngredients = [],
   onToggleIngredient,
 }: IngredientListCollapsibleProps) {
-  // Group ingredients by section
+  // ========================================
+  // Group ingredients by section and sort
+  // ========================================
+  //
+  // ALGORITHM:
+  // 1. Group by section field (null = no section)
+  // 2. Convert Map → array
+  // 3. Sort: null first, then alphabetically
+  //
+  // WHY ALPHABETICAL (not insertion order):
+  // - Predictable section order across recipe views
+  // - User can find sections quickly (sorted like a menu)
+  // - Null section always first (most common/default ingredients)
   const groupedIngredients: GroupedIngredients[] = [];
   const ingredientsBySection = new Map<string | null, Ingredient[]>();
 
   ingredients.forEach(ingredient => {
-    const section = ingredient.section || null;
+    const section = ingredient.section || null; // Normalize undefined → null
     if (!ingredientsBySection.has(section)) {
       ingredientsBySection.set(section, []);
     }
     ingredientsBySection.get(section)!.push(ingredient);
   });
 
-  // Convert to array and sort: null section first, then alphabetically
+  // Convert to array
   ingredientsBySection.forEach((ingredients, section) => {
     groupedIngredients.push({ section, ingredients });
   });
 
-  // Sort: null section first, then alphabetically
+  // Sort sections
   groupedIngredients.sort((a, b) => {
-    if (a.section === null) return -1;
+    if (a.section === null) return -1; // Null section first
     if (b.section === null) return 1;
-    return a.section.localeCompare(b.section);
+    return a.section.localeCompare(b.section); // Alphabetical
   });
 
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
@@ -70,7 +99,11 @@ export function IngredientListCollapsible({
         const isExpanded = expandedSections.has(sectionKey);
         const hasSection = group.section !== null;
 
-        // If no section, render ingredients directly without collapsible header
+        // ========================================
+        // Null section: Render flat (no collapsible header)
+        // ========================================
+        // WHY: Simple recipes often have single section → avoid unnecessary UI chrome
+        // Named sections get collapsible headers below (lines 109-163)
         if (!hasSection) {
           return (
             <ul key={sectionKey} className="space-y-3">

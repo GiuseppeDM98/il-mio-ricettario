@@ -13,7 +13,38 @@ import {
 import { db } from './config';
 import { Category, Subcategory } from '@/types';
 
-// Default categories to create for new users
+/**
+ * Category and Subcategory Management
+ *
+ * Architecture:
+ * - Two collections: categories and subcategories
+ * - User-scoped: All queries filter by userId
+ * - Default categories: Created on user sign-up (see auth-context.tsx)
+ * - Order field: Manual sorting (drag-drop in future)
+ *
+ * Helper Functions:
+ * - generateColorFromName: Hash-based consistent color assignment
+ * - generateIconFromName: Keyword matching for Italian food categories
+ * - createCategoryIfNotExists: Idempotent creation for AI suggestions
+ */
+
+/**
+ * Default categories created for new users
+ *
+ * Italian cuisine structure:
+ * - Primi piatti (First courses): Pasta, risotto, soups
+ * - Secondi piatti (Second courses): Meat, fish main dishes
+ * - Contorni (Side dishes): Vegetables, salads
+ * - Dolci (Desserts): Cakes, cookies, pastries
+ * - Antipasti (Appetizers): Starters, finger foods
+ *
+ * Order determines display sequence in UI.
+ *
+ * CHECKLIST: If you add a default category here, also update:
+ * - Category type definitions in types/index.ts (if new fields added)
+ * - Recipe extraction prompts in app/api/extract-recipes/route.ts
+ * - Category suggestion prompts in app/api/suggest-category/route.ts
+ */
 export const DEFAULT_CATEGORIES = [
   { name: 'Primi piatti', icon: '🍝', color: '#FF6B6B', order: 1 },
   { name: 'Secondi piatti', icon: '🥩', color: '#4ECDC4', order: 2 },
@@ -80,9 +111,22 @@ export async function updateCategory(
   await updateDoc(categoryRef, updates);
 }
 
-// Delete category and all its subcategories
+/**
+ * Delete category and all its subcategories
+ *
+ * @param categoryId - Category to delete
+ * @param userId - User ID for security filtering
+ *
+ * Cascade Delete Pattern:
+ * 1. Query all subcategories for this category
+ * 2. Delete all subcategories in parallel
+ * 3. Delete the category itself
+ *
+ * Note: Does NOT delete recipes in this category - they become uncategorized.
+ * This prevents accidental data loss.
+ */
 export async function deleteCategory(categoryId: string, userId: string): Promise<void> {
-  // First, delete all subcategories
+  // First, delete all subcategories in parallel for performance
   const subcategoriesRef = collection(db, 'subcategories');
   const q = query(
     subcategoriesRef,
@@ -166,14 +210,30 @@ export async function deleteSubcategory(subcategoryId: string): Promise<void> {
   await deleteDoc(subcategoryRef);
 }
 
-// Helper function to generate color based on category name
+/**
+ * Generate consistent color for a category name
+ *
+ * Algorithm: Simple hash function (DJB2 variant)
+ * 1. Initialize hash to 0
+ * 2. For each character: hash = charCode + ((hash << 5) - hash)
+ *    - Left shift by 5 is equivalent to multiply by 32
+ *    - Formula is: hash = charCode + (hash * 32 - hash) = charCode + hash * 31
+ * 3. Take modulo of color palette size for index
+ *
+ * Properties:
+ * - Same name always gets same color (consistency)
+ * - Different names distribute across palette (variety)
+ * - Fast computation (no cryptographic security needed)
+ *
+ * Reference: DJB2 hash (http://www.cse.yorku.ca/~oz/hash.html)
+ */
 function generateColorFromName(name: string): string {
   const colors = [
     '#FF6B6B', '#4ECDC4', '#95E1D3', '#F38181', '#FFA07A',
     '#45B7D1', '#F7DC6F', '#BB8FCE', '#F8B739', '#52C41A'
   ];
 
-  // Simple hash function to get consistent color for same name
+  // Hash function: accumulates character codes with bit shift multiplication
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
@@ -182,7 +242,22 @@ function generateColorFromName(name: string): string {
   return colors[Math.abs(hash) % colors.length];
 }
 
-// Helper function to generate icon based on category name
+/**
+ * Generate appropriate emoji icon for an Italian category name
+ *
+ * Strategy: Keyword substring matching
+ * - iconMap contains Italian food term roots (e.g., "zupp" matches "zuppa", "zuppe")
+ * - Partial matching enables flexible recognition ("primi" in "primi piatti")
+ * - Case-insensitive to handle "PASTA" vs "Pasta"
+ *
+ * Italian Cuisine Mapping:
+ * - primi/pasta/risott → 🍝🍚 (carbs)
+ * - secondi/carne/pesce → 🥩🐟 (proteins)
+ * - contorni/verdur/insalat → 🥗🥬 (vegetables)
+ * - dolci/frutta → 🍰🍎 (sweets)
+ *
+ * Fallback: 🍽️ (generic plate) for unrecognized categories
+ */
 function generateIconFromName(name: string): string {
   const iconMap: Record<string, string> = {
     'primi': '🍝',
@@ -206,23 +281,38 @@ function generateIconFromName(name: string): string {
 
   const lowerName = name.toLowerCase();
 
-  // Try to match partial name
+  // Try to match partial name (e.g., "zupp" matches "zuppa", "zuppe", "zuppiera")
+  // First match wins - order in iconMap matters for ambiguous cases
   for (const [key, icon] of Object.entries(iconMap)) {
     if (lowerName.includes(key)) {
       return icon;
     }
   }
 
-  // Default icon
+  // No match found - return generic food plate emoji
   return '🍽️';
 }
 
-// Create category if it doesn't exist, otherwise return existing category ID
+/**
+ * Create category if it doesn't exist, otherwise return existing category ID
+ *
+ * @param userId - User ID
+ * @param categoryName - Name of category to create
+ * @returns Category ID (existing or newly created)
+ *
+ * Use Case: AI recipe extraction suggests category names that may or may not
+ * exist. This idempotent function prevents duplicate categories.
+ *
+ * Matching: Case-insensitive comparison ("DOLCI" === "Dolci" === "dolci")
+ *
+ * Order Assignment: New categories are appended to end (max order + 1)
+ */
 export async function createCategoryIfNotExists(
   userId: string,
   categoryName: string
 ): Promise<string> {
-  // First, check if category already exists
+  // Check if category already exists (case-insensitive)
+  // Prevents duplicates like "Dolci" and "dolci" from AI suggestions
   const categories = await getUserCategories(userId);
   const existingCategory = categories.find(
     cat => cat.name.toLowerCase() === categoryName.toLowerCase()
