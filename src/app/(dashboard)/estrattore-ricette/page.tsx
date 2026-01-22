@@ -25,6 +25,9 @@ export default function RecipeExtractorPage() {
   const [error, setError] = useState<string | null>(null);
   const [userCategories, setUserCategories] = useState<Category[]>([]);
 
+  // Check if user is test account (AI disabled for test account)
+  const isTestAccount = user?.email === 'test@test.com';
+
   // Load user categories on mount
   useEffect(() => {
     const loadCategories = async () => {
@@ -43,6 +46,12 @@ export default function RecipeExtractorPage() {
   const handleFileSelected = async (file: File) => {
     if (!user) {
       toast.error('Devi effettuare il login per usare questa funzionalità');
+      return;
+    }
+
+    // Block test account from using AI extraction
+    if (user.email === 'test@test.com') {
+      toast.error('L\'estrazione AI è disabilitata per l\'account di test');
       return;
     }
 
@@ -195,11 +204,26 @@ export default function RecipeExtractorPage() {
         </p>
       </div>
 
+      {/* Test Account Warning */}
+      {isTestAccount && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <h3 className="font-semibold text-yellow-900">Funzionalità AI Disabilitata</h3>
+            <p className="text-sm text-yellow-700 mt-1">
+              L'estrazione AI è disabilitata per l'account di test per proteggere le risorse API.
+              
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Upload Section */}
       <div className="bg-white rounded-lg border p-6">
         <RecipeExtractorUpload
           onFileSelected={handleFileSelected}
           isLoading={isExtracting}
+          disabled={isTestAccount}
         />
 
         {isExtracting && (

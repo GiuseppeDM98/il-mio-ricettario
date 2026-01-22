@@ -1,1560 +1,1874 @@
-# 🍝 Il Mio Ricettario
+# Il Mio Ricettario
+
+> A modern, privacy-first digital recipe book with AI-powered PDF extraction
+
+Designed for home cooks who want to digitize their recipe collections without compromising on simplicity and speed.
 
 ![Version](https://img.shields.io/badge/version-0.1.0-blue)
-![Next.js](https://img.shields.io/badge/Next.js-14-black)
-![Firebase](https://img.shields.io/badge/Firebase-10-orange)
-![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
-
-**Il ricettario digitale intelligente che cresce con te - dalla ricetta alle tecniche, dal privato alla community**
-
-Un'applicazione web moderna per organizzare, catalogare e condividere le tue ricette preferite, con **funzionalità AI integrate** per estrarre automaticamente ricette da PDF e una modalità cooking avanzata con tracciamento del progresso.
-
-> 💡 **Design Philosophy**: Un ricettario pulito e text-based, senza immagini. Il focus è sul contenuto - ingredienti, procedimenti e tecniche - per un'esperienza veloce e funzionale in cucina.
+![License](https://img.shields.io/badge/license-AGPL--3.0-blue)
+![Next.js](https://img.shields.io/badge/Next.js-14.2-black)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue)
+![Firebase](https://img.shields.io/badge/Firebase-10.7-orange)
 
 ---
 
-## ✨ Caratteristiche Principali
+## Table of Contents
 
-### 🔐 Autenticazione Sicura
-- Login con Email/Password
-- Google OAuth integration
-- Gestione sessioni con Firebase Auth
-- Dati privati isolati per utente
-
-### 📖 Gestione Ricette Completa
-- **CRUD completo**: Crea, visualizza, modifica, elimina ricette
-- **Ingredienti sezionati**: Organizza ingredienti in sezioni (es. "Per la pasta", "Per il condimento")
-- **Step di preparazione**: Passaggi numerati con sezioni opzionali
-- **Metadati ricchi**: Porzioni, tempo di preparazione, tempo di cottura, difficoltà
-- **Categorie personalizzabili**: Sistema di categorie e sottocategorie con emoji e colori
-- **Attributo stagione**: Ogni ricetta può avere una stagione associata con icone intuitive (🌸 ☀️ 🍂 ❄️ 🌍)
-- **Filtri avanzati**: Filtra ricette per stagione nella lista principale con conteggio per stagione
-- **Filtri combinabili**: Filtra ricette per categoria, sottocategoria e stagione simultaneamente con dropdown intuitivi
-
-Update
-
-### 📱 Mobile-First Design
-- Design responsive ottimizzato per smartphone
-- Layout adattivo per desktop con sidebar
-- Navigazione mobile con hamburger menu nella header
-- Touch-friendly UI per uso in cucina
-- Animazione di loading durante il caricamento iniziale dell'app
-
-### 👨‍🍳 Modalità Cooking Avanzata
-- **Schermo sempre acceso** durante la preparazione (via nosleep.js)
-- **Tracciamento progresso in tempo reale**: checkbox per ingredienti e step completati
-- **Sessioni salvate in Firestore**: riprendi la preparazione da dove ti sei fermato
-- **Progress bar visuale** con statistiche ingredienti/step completati
-- Vista ottimizzata per seguire la ricetta step-by-step
-- Layout pulito e leggibile anche da lontano
-
-### 🤖 Estrattore AI di Ricette ✨ (IMPLEMENTATO)
-- **Import automatico da PDF** con Claude AI 4.5 (Anthropic)
-- **Supporto PDF multipagina**: estrae automaticamente TUTTE le ricette presenti nel documento
-- **Parser intelligente** con preservazione struttura originale (sezioni ingredienti/procedimento)
-- **Categorizzazione automatica intelligente**: Claude suggerisce la categoria in base al contenuto
-  - Usa categorie esistenti o propone nuove categorie
-  - Creazione automatica categoria con icona/colore generati
-  - Badge "Suggerito da AI" per trasparenza
-  - Modificabile dall'utente prima del salvataggio
-- **Classificazione stagionale automatica**: AI determina la stagione della ricetta
-  - Database ingredienti stagionali italiani integrato
-  - 5 stagioni supportate: Primavera (🌸), Estate (☀️), Autunno (🍂), Inverno (❄️), Tutte le stagioni (🌍)
-  - Basato su analisi ingredienti specifici italiani
-  - Filtro stagione nella lista ricette con conteggio
-- **Anteprima editabile**: controlla e modifica ogni ricetta prima di salvare
-- **Normalizzazione automatica**: tempi convertiti in minuti, sezioni capitalizzate
-- **Salvataggio selettivo**: scegli quali ricette salvare o salva tutto in batch
-- **API endpoint dedicato**: `/api/extract-recipes` con validazione file (max 4.4MB, limite Vercel)
-- **Gestione PDF grandi**: suggerimenti automatici per compressione con servizi esterni (iLovePDF, Adobe Online)
-
-### 📋 Cotture in Corso (IMPLEMENTATO)
-- **Dashboard dedicata** per visualizzare tutte le preparazioni attive
-- **Progress tracking dettagliato**: vedi a che punto sei con ogni ricetta
-- **Checkbox interattive**: spunta ingredienti e step man mano che li completi
-- **Ripresa sessioni**: continua le preparazioni interrotte in qualsiasi momento
-- **Statistiche live**: ingredienti/step completati vs totali con percentuale progresso
-
-### 🎯 Roadmap Features
-
-**Phase 2 - Advanced Features** (Pianificato)
-- Ricerca avanzata per titolo, ingredienti, categoria
-- Filtri multipli combinabili
-- Import ricette da URL (GialloZafferano, etc.)
-- Note tecniche di cucina (dry brining, cottura ibrida, etc.)
-- Collegamenti intelligenti tra tecniche e ricette
+- [About the Project](#about-the-project)
+- [Features](#features)
+- [Quick Start](#quick-start)
+- [Installation](#installation)
+- [Tech Stack](#tech-stack)
+- [Architecture & Design Decisions](#architecture--design-decisions)
+- [Development](#development)
+- [Deployment](#deployment)
+- [Database Schema](#database-schema)
+- [API Reference](#api-reference)
+- [Contributing](#contributing)
+- [Troubleshooting](#troubleshooting)
+- [License](#license)
+- [Support](#support)
 
 ---
 
-## 🛠️ Tech Stack
+## About the Project
 
-### Frontend
-- **[Next.js 14](https://nextjs.org/)** - React framework con App Router
-- **[React 18](https://react.dev/)** - UI library
-- **[TypeScript 5](https://www.typescriptlang.org/)** - Type safety
-- **[Tailwind CSS](https://tailwindcss.com/)** - Utility-first CSS con design system HSL
+**Il Mio Ricettario** (My Recipe Book) is a full-stack web application that helps home cooks digitize and organize their recipe collections. Built with Next.js and powered by Claude AI, it offers intelligent PDF recipe extraction, making it effortless to convert physical cookbooks or PDF recipe collections into a searchable, organized digital format.
 
-### UI Components
-- **[Radix UI](https://www.radix-ui.com/)** - Accessible component primitives (Dialog, Toast, Sheet)
-- **[Lucide React](https://lucide.dev/)** - Icon library
-- **[class-variance-authority](https://cva.style/)** - Component variant styling
+### What Makes It Different
 
-### Backend & Services
-- **[Firebase Authentication](https://firebase.google.com/docs/auth)** - Gestione utenti (Email + Google OAuth)
-- **[Cloud Firestore](https://firebase.google.com/docs/firestore)** - Database NoSQL real-time
-- **[Firebase Hosting](https://firebase.google.com/docs/hosting)** - Hosting statico con CDN
-- **[Anthropic Claude API](https://docs.anthropic.com/)** - AI per estrazione ricette da PDF (Claude 4.5 Sonnet)
+- **Text-Focused Design**: No image uploads required. Focus on what matters while cooking: ingredients, steps, and techniques.
+- **Privacy-First Architecture**: Your recipes, your data. All data is stored in your own Firebase account with owner-based security rules.
+- **AI-Powered Extraction**: Upload PDF cookbooks and automatically extract all recipes with intelligent categorization and seasonal classification.
+- **Cooking-Optimized**: Screen wake lock, progress tracking, and mobile-first design make it perfect for actual kitchen use.
+- **Open Source**: AGPL-3.0 licensed to ensure the project and its improvements remain open and available to everyone.
 
-### Development Tools
-- **[Jest](https://jestjs.io/)** - Testing framework
-- **[Testing Library](https://testing-library.com/)** - React component testing
-- **[ESLint](https://eslint.org/)** - Linting
-- **[Zod](https://zod.dev/)** - Schema validation
+### Design Philosophy
 
-### Utilities
-- **[uuid](https://www.npmjs.com/package/uuid)** - ID generation per ingredienti/steps
-- **[nosleep.js](https://github.com/richtr/NoSleep.js)** - Screen wake lock per cooking mode
-- **[react-hot-toast](https://react-hot-toast.com/)** - Toast notifications
+> Clean, text-based interface optimized for actual cooking use. Focus on content (ingredients, steps, techniques) over visual aesthetics. Your recipes, your data, your device.
+
+This project deliberately avoids image-heavy interfaces common in recipe apps. Instead, it prioritizes speed, clarity, and functionality—exactly what you need when you're cooking.
 
 ---
 
-## 📋 Prerequisiti
+## Features
 
-- **Node.js** 18.0.0 o superiore
-- **npm** o **yarn**
-- **Git**
-- **Account Firebase** (piano gratuito disponibile)
-- **Anthropic API Key** (per funzionalità estrattore AI) - [Ottieni qui](https://console.anthropic.com/)
-- (Opzionale) **Firebase CLI** per deployment
+### Core Recipe Management
+
+- **Complete CRUD Operations**: Create, read, update, and delete recipes with full metadata support
+- **Sectioned Organization**: Organize ingredients and steps into sections (e.g., "For the dough", "For the filling")
+- **Rich Metadata**: Track servings, prep time, cook time, difficulty level, and seasonal availability
+- **Smart Categorization**: Organize recipes with customizable categories and subcategories, each with emoji and color
+- **Advanced Filtering**: Filter recipes by category, subcategory, and season simultaneously with live count updates
+
+**[Screenshot: Recipe list with category and season filters]**
+
+### Secure Authentication
+
+- **Email/Password Authentication**: Standard email-based registration and login
+- **Google OAuth Integration**: Quick sign-in with Google accounts
+- **Firebase Auth**: Industry-standard authentication with automatic session management
+- **User Data Isolation**: Every user's recipes are completely isolated with owner-based security rules
+
+### Cooking Mode
+
+**[Screenshot: Cooking mode interface with checkboxes and progress tracking]**
+
+- **Screen Wake Lock**: Uses nosleep.js to prevent your device from going to sleep while cooking
+- **Interactive Checkboxes**: Check off ingredients and steps as you complete them
+- **Progress Tracking**: Visual progress bar shows completion percentage
+- **Persistent Sessions**: Close the app and come back later—your progress is automatically saved
+- **Serving Size Scaling**: Select different serving sizes and ingredient quantities adjust automatically
+- **Italian Decimal Format**: Properly formatted quantities (e.g., "1,5 kg" instead of "1.5 kg")
+- **Auto-Cleanup**: Completed cooking sessions (100% progress) are automatically deleted
+
+### Active Cooking Sessions Dashboard
+
+- **Centralized View**: See all your in-progress cooking sessions in one place
+- **Quick Resume**: Jump back into any active cooking session with one click
+- **Progress At-A-Glance**: See how far you've progressed in each recipe
+- **Real-Time Updates**: Session progress updates instantly across all devices
+
+### AI-Powered PDF Extraction
+
+**[Screenshot: PDF extraction preview with AI-suggested categories]**
+
+The standout feature that sets Il Mio Ricettario apart:
+
+- **Automatic Recipe Extraction**: Upload PDF cookbooks and Claude AI extracts all recipes automatically
+- **Multi-Page Support**: Processes entire PDF documents, extracting every recipe found
+- **Structure Preservation**: Maintains the original organization of ingredients and steps
+- **Intelligent Categorization**: AI suggests appropriate categories (using existing ones or proposing new ones)
+- **Seasonal Classification**: Analyzes ingredients against an Italian seasonal ingredient database
+- **Smart Normalization**: Converts times to minutes, capitalizes section headers, standardizes formatting
+- **Editable Preview**: Review and modify all extracted recipes before saving
+- **Selective Save**: Choose which recipes to save, or save all at once
+- **Transparency**: Recipes and categories suggested by AI are clearly marked with badges
+
+**Technical Details**:
+- Powered by Claude Sonnet 4.5 (200K token context window)
+- Native PDF support with base64 encoding
+- Maximum file size: 4.4MB (Vercel request body limit)
+- Endpoint: `/api/extract-recipes`
+
+**Italian Seasonal Ingredient Database**:
+- **Primavera (Spring)**: Asparagus, artichokes, fava beans, peas, strawberries
+- **Estate (Summer)**: Tomatoes, eggplant, zucchini, basil, peaches
+- **Autunno (Autumn)**: Pumpkin, mushrooms, chestnuts, radicchio
+- **Inverno (Winter)**: Black cabbage, citrus, turnip greens, fennel
+- **Tutte le stagioni (All seasons)**: For recipes without strong seasonal ingredients
+
+### Mobile-First Responsive Design
+
+**[Screenshot: Mobile navigation in portrait vs landscape orientation]**
+
+- **Orientation-Aware Navigation**:
+  - **Desktop (≥ 1440px)**: Persistent sidebar navigation always visible
+  - **Mobile Portrait**: Bottom navigation bar with 4 main tabs + "More" sheet
+  - **Mobile Landscape**: Hamburger menu with slide-out sidebar
+- **Custom 1440px Breakpoint**: Optimized for tablets to use mobile UI (better for cooking)
+- **Touch-Friendly**: Large tap targets, swipe gestures, and mobile-optimized interactions
+- **Responsive Tables**: Ingredient and step lists adapt gracefully to all screen sizes
 
 ---
 
-## 🚀 Installazione
+## Quick Start
 
-### 1. Clone del Repository
+Get up and running in less than 5 minutes.
+
+### Prerequisites
+
+- **Node.js 18+** and npm
+- **Firebase account** (free tier works perfectly)
+- **Anthropic API key** (for AI features—free trial available)
+
+### Installation
 
 ```bash
+# 1. Clone the repository
 git clone https://github.com/GiuseppeDM98/il-mio-ricettario.git
 cd il-mio-ricettario
-```
 
-### 2. Installazione Dipendenze
-
-```bash
+# 2. Install dependencies
 npm install
-```
 
-Se da visual studio code si riceve un errore per l'esecuzione di alcuni comandi, eseguire questo
-```
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process
-```
-
-### 3. Setup Firebase
-
-#### a) Crea un progetto Firebase
-1. Vai su [Firebase Console](https://console.firebase.google.com/)
-2. Clicca "Add project" e segui la procedura guidata
-3. Nome progetto: `il-mio-ricettario` (o altro nome)
-
-#### b) Abilita servizi necessari
-
-**Authentication:**
-1. Vai su Authentication → Get started
-2. Abilita "Email/Password" sign-in method
-3. Abilita "Google" sign-in method (configura OAuth consent screen se richiesto)
-
-**Firestore Database:**
-1. Vai su Firestore Database → Create database
-2. Scegli modalità "Production" (le security rules sono già preparate)
-3. Seleziona location (es. `europe-west3` per EU)
-
-#### c) Ottieni credenziali Firebase
-1. Vai su Project Settings (⚙️) → General
-2. Scorri fino a "Your apps" → Seleziona Web (</> icon)
-3. Registra l'app con un nickname
-4. Copia le credenziali Firebase config
-
-### 4. Configurazione Ambiente
-
-Crea un file `.env.local` nella root del progetto:
-
-```bash
+# 3. Configure environment variables
 cp .env.example .env.local
+# Edit .env.local with your Firebase config and Anthropic API key
+
+# 4. Run the development server
+npm run dev
 ```
 
-Modifica `.env.local` con le tue credenziali Firebase e Anthropic:
+Open [http://localhost:3000](http://localhost:3000) in your browser. You should see the login page.
+
+**Note**: For full functionality, you'll need to complete the Firebase setup (see [Installation](#installation) below).
+
+---
+
+## Installation
+
+Complete setup guide for local development.
+
+### System Requirements
+
+- **Node.js**: 18.0.0 or higher
+- **npm**: 9.0.0 or higher (or yarn 1.22.0+)
+- **Modern Browser**: Chrome 90+, Firefox 88+, Safari 14+, or Edge 90+
+- **Git**: For cloning the repository
+
+### Step 1: Firebase Project Setup
+
+1. Go to [Firebase Console](https://console.firebase.google.com/)
+2. Click "Add project" or "Create a project"
+3. Enter project name (e.g., "my-recipe-book")
+4. (Optional) Enable Google Analytics
+5. Click "Create project" and wait for initialization
+
+**Verification**: You should see the Firebase project dashboard
+
+### Step 2: Enable Authentication
+
+1. In the Firebase Console sidebar, click **Authentication**
+2. Click "Get started"
+3. Go to the "Sign-in method" tab
+
+**Enable Email/Password**:
+1. Click "Email/Password"
+2. Toggle the first switch to "Enabled"
+3. Click "Save"
+
+**Enable Google Sign-In**:
+1. Click "Google"
+2. Toggle to "Enabled"
+3. Select a project support email
+4. Click "Save"
+
+**Verification**: Both "Email/Password" and "Google" should show "Enabled" status
+
+### Step 3: Create Firestore Database
+
+1. In the sidebar, click **Firestore Database**
+2. Click "Create database"
+3. **Security rules**: Select "Start in production mode" (we'll deploy custom rules next)
+4. **Location**: Choose the closest region to your users
+   - Europe: `eur3` (Belgium)
+   - US: `us-central` (Iowa)
+   - Asia: `asia-southeast1` (Singapore)
+   - **Important**: This cannot be changed later!
+5. Click "Enable"
+
+**Verification**: Empty Firestore console should appear
+
+### Step 4: Deploy Firestore Security Rules
+
+The project includes owner-based security rules that ensure users can only access their own data.
 
 ```bash
-# Firebase Configuration
-NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSy...
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=il-mio-ricettario.firebaseapp.com
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=il-mio-ricettario
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=il-mio-ricettario.appspot.com
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=123456789
-NEXT_PUBLIC_FIREBASE_APP_ID=1:123456789:web:abcdef
-
-# Anthropic AI Configuration (per estrattore ricette)
-ANTHROPIC_API_KEY=sk-ant-api03-...
-```
-
-⚠️ **IMPORTANTE**:
-- Non committare mai il file `.env.local`. È già incluso in `.gitignore`.
-- La chiave `ANTHROPIC_API_KEY` è usata solo lato server (API route) e NON deve avere il prefisso `NEXT_PUBLIC_`.
-
-### 5. Deploy Firebase Security Rules
-
-Installa Firebase CLI se non l'hai già:
-
-```bash
+# Install Firebase CLI globally (if not already installed)
 npm install -g firebase-tools
-```
 
-Autenticati:
-
-```bash
+# Login to Firebase
 firebase login
-```
 
-Inizializza Firebase nel progetto:
+# Link your local project to your Firebase project
+firebase use --add
+# Select your project from the list
+# Use "default" as the alias
 
-```bash
-firebase init
-```
-
-Seleziona:
-- ☑️ Firestore (Rules e Indexes)
-- ☑️ Hosting (se vuoi fare deploy)
-
-Quando richiesto:
-- Firestore rules file: `firebase/firestore.rules` (già presente)
-- Firestore indexes file: `firebase/firestore.indexes.json` (già presente)
-- Public directory: `out` (per Next.js export) o `build`
-
-Deploy delle security rules:
-
-```bash
-# Deploy Firestore rules
+# Deploy the security rules
 firebase deploy --only firestore:rules
 ```
 
-Verifica che l'output mostri successo:
+**Expected Output**:
 ```
-✔  firestore: deployed rules firestore.rules successfully
-```
+=== Deploying to 'your-project-name'...
 
-### 6. Avvia il Server di Sviluppo
+i  deploying firestore
+✔  firestore: released rules firestore.rules to cloud.firestore
 
-```bash
-npm run dev
-```
-
-Apri [http://localhost:3000](http://localhost:3000) nel browser.
-
-Dovresti vedere la pagina di login. Crea un account per iniziare!
-
----
-
-## 💻 Utilizzo
-
-### Registrazione e Login
-
-1. **Primo accesso**: Vai su `/register` e crea un account
-   - Email/Password oppure
-   - Login rapido con Google
-2. Alla registrazione, vengono create automaticamente 5 categorie default:
-   - 🍝 Primi piatti
-   - 🥩 Secondi piatti
-   - 🥗 Contorni
-   - 🍰 Dolci
-   - 🧀 Antipasti
-
-### Creare una Ricetta
-
-```typescript
-// Esempio struttura dati ricetta
-{
-  title: "Pasta alla Carbonara",
-  description: "Il classico romano autentico",
-  servings: 4,
-  prepTime: 10,  // minuti
-  cookTime: 15,  // minuti
-  categoryId: "primi-piatti-id",
-  difficulty: "media",
-  ingredients: [
-    { id: "1", name: "Guanciale", quantity: "150g", section: "Ingredienti base" },
-    { id: "2", name: "Pecorino Romano", quantity: "80g", section: "Ingredienti base" },
-    { id: "3", name: "Uova", quantity: "4 tuorli + 1 intero", section: "Per la crema" },
-  ],
-  steps: [
-    {
-      id: "1",
-      order: 1,
-      description: "Taglia il guanciale a listarelle e rosolalo in padella",
-      section: "Preparazione"
-    },
-    {
-      id: "2",
-      order: 2,
-      description: "Mescola uova e pecorino in una ciotola",
-      section: "Crema"
-    },
-  ]
-}
+✔  Deploy complete!
 ```
 
-#### Step-by-step UI:
+**Verification**:
+- In Firebase Console, go to **Firestore Database** → **Rules** tab
+- You should see the deployed rules with `isAuthenticated()` and `isOwner()` functions
 
-1. Clicca su "➕ Nuova Ricetta" nella homepage
-2. Compila i campi:
-   - **Titolo** (obbligatorio)
-   - **Descrizione** (opzionale)
-   - **Categoria/Sottocategoria** (selettori a cascata)
-   - **Porzioni, Tempo prep, Tempo cottura**
-3. **Ingredienti**:
-   - Aggiungi sezioni con "➕ Aggiungi Sezione" (es. "Per la pasta", "Per il sugo")
-   - Ogni sezione può contenere N ingredienti
-   - Ogni ingrediente ha nome + quantità
-4. **Preparazione**:
-   - Aggiungi step numerati
-   - Ogni step può avere un titolo di sezione (opzionale)
-5. Clicca "Crea Ricetta"
+### Step 5: Get Firebase Configuration
 
-### Modalità Cooking
+1. In Firebase Console, click the gear icon ⚙️ → **Project settings**
+2. Scroll down to "Your apps" section
+3. If you don't have a web app yet:
+   - Click the web icon `</>`
+   - App nickname: "Il Mio Ricettario Web"
+   - Don't check "Firebase Hosting"
+   - Click "Register app"
+4. Copy the `firebaseConfig` object:
 
-1. Apri una ricetta
-2. Clicca su "👨‍🍳 Inizia a Cucinare"
-3. Lo schermo rimane acceso automaticamente
-4. Vista ottimizzata:
-   - Ingredienti raggruppati per sezione (collapsible) con checkbox
-   - Step numerati e sezionati con checkbox
-   - Tempi e porzioni in evidenza
-   - Progress bar con percentuale completamento
-5. La sessione viene salvata automaticamente in Firestore
-6. Riprendi da "📋 Cotture in Corso" in qualsiasi momento
-
-### Estrattore AI di Ricette
-
-1. Vai su "✨ Estrattore AI" dal menu
-2. Carica un file PDF contenente ricette (max 4.4MB)
-3. L'AI di Claude analizza il PDF ed estrae automaticamente le ricette
-4. **Per ogni ricetta estratta, l'AI suggerisce:**
-   - **Categoria**: Sceglie tra categorie esistenti o ne propone una nuova
-   - **Stagione**: Determina la stagionalità in base agli ingredienti italiani
-5. Controlla le ricette estratte:
-   - Ogni ricetta mostra i suggerimenti AI con badge "✨ Suggerito da AI"
-   - Categoria modificabile (se nuova, viene creata automaticamente al salvataggio)
-   - Stagione modificabile con selettore icone intuitive (🌸 ☀️ 🍂 ❄️ 🌍)
-   - Ingredienti organizzati per sezioni
-   - Step di preparazione numerati
-   - Metadati (porzioni, tempi) già parsati
-6. Modifica categoria/stagione se necessario (opzionale)
-7. Salva singolarmente o tutte in batch
-8. Le ricette vengono aggiunte con categoria e stagione al tuo ricettario con source type "pdf"
-
-💡 **Tips per migliori risultati**:
-- PDF ben strutturati con sezioni chiare
-- Testo selezionabile (non solo immagini scansionate)
-- Ricette con format tradizionale (ingredienti → procedimento)
-- PDF fino a 4.4MB supportati (limite Vercel)
-
-⚠️ **Limite dimensione file**:
-- Se il PDF supera 4.4MB, usa un servizio di compressione gratuito:
-  - [iLovePDF](https://www.ilovepdf.com/it/comprimere_pdf) (consigliato)
-  - Adobe Acrobat Online
-  - Smallpdf
-
-### Gestire Categorie
-
-1. Vai su "🏷️ Categorie" dalla sidebar
-2. **Creare categoria**:
-   - Clicca "➕ Nuova Categoria"
-   - Scegli emoji, nome, colore
-3. **Creare sottocategoria**:
-   - Espandi una categoria
-   - Clicca "➕ Aggiungi Sottocategoria"
-4. **Modificare/Eliminare**:
-   - Usa i button di edit (✏️) o delete (🗑️)
-   - ⚠️ Non puoi eliminare categorie default con ricette associate
-
-### Filtrare Ricette
-
-Nella pagina "Le mie ricette" hai a disposizione tre tipi di filtri combinabili:
-
-#### 1. Filtro per Categoria
-- **Dropdown "Filtra per categoria"** con tutte le tue categorie
-- Mostra il conteggio di ricette per ogni categoria
-- Esempio: "🍝 Primi piatti (12)"
-- Seleziona "Tutte le categorie" per rimuovere il filtro
-
-#### 2. Filtro per Sottocategoria
-- **Dropdown "Filtra per sottocategoria"** (disponibile dopo aver selezionato una categoria)
-- Mostra solo le sottocategorie della categoria selezionata
-- Mostra il conteggio di ricette per ogni sottocategoria
-- Si resetta automaticamente quando cambi categoria
-
-#### 3. Filtro per Stagione
-- **Pulsanti stagionali** con icone intuitive:
-  - 🌸 Primavera
-  - ☀️ Estate
-  - 🍂 Autunno
-  - ❄️ Inverno
-  - 🌍 Tutte le stagioni
-- Ogni pulsante mostra il conteggio delle ricette
-- Clicca su "Tutte" per visualizzare tutte le ricette
-
-#### Filtri Combinati
-I tre filtri lavorano insieme:
-- Puoi selezionare una categoria + una stagione per trovare, ad esempio, "Primi piatti estivi"
-- Puoi selezionare categoria + sottocategoria + stagione per ricerche molto specifiche
-- Esempio: "Primi piatti → Pasta → Estate" mostra solo le paste estive
-
-💡 **Tip**: I contatori si aggiornano dinamicamente in base ai filtri attivi, aiutandoti a capire quante ricette corrispondono ai criteri selezionati.
-
----
-
-## ⚙️ Configurazione
-
-### File di Configurazione
-
-#### `next.config.js`
 ```javascript
-{
-  output: 'standalone',        // Per deployment ottimizzato
-  images: { unoptimized: true }, // No Next.js image optimization
-  redirects: [
-    { source: '/', destination: '/ricette', permanent: true }
-  ]
-}
+const firebaseConfig = {
+  apiKey: "AIzaSyC...",
+  authDomain: "your-project.firebaseapp.com",
+  projectId: "your-project-id",
+  storageBucket: "your-project.appspot.com",
+  messagingSenderId: "123456789012",
+  appId: "1:123456789012:web:abcdef123456"
+};
 ```
 
-#### `tailwind.config.ts`
-Design system con HSL color tokens:
-```typescript
-{
-  primary: '#ef4444',    // Red theme
-  secondary: '#6b7280',  // Gray theme
-  // ... altri token semantici
-}
-```
+**Save these values**—you'll need them for the next step.
 
-#### `firebase/firestore.rules`
-Security rules basate su ownership:
-```
-// Regola base per tutte le collection
-allow read, write: if request.auth != null
-                   && resource.data.userId == request.auth.uid
-```
+### Step 6: Get Anthropic API Key
 
-### Variabili d'Ambiente
+1. Go to [Anthropic Console](https://console.anthropic.com/)
+2. Sign up or log in
+3. Navigate to **API Keys** section
+4. Click "Create Key"
+5. Name: "Il Mio Ricettario"
+6. Copy the API key (format: `sk-ant-api03-...`)
 
-| Variabile | Descrizione | Esempio | Visibilità |
-|-----------|-------------|---------|------------|
-| `NEXT_PUBLIC_FIREBASE_API_KEY` | Firebase API key | `AIzaSy...` | Client + Server |
-| `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | Auth domain | `app.firebaseapp.com` | Client + Server |
-| `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | Project ID | `il-mio-ricettario` | Client + Server |
-| `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | Storage bucket | `app.appspot.com` | Client + Server |
-| `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | Sender ID | `123456789` | Client + Server |
-| `NEXT_PUBLIC_FIREBASE_APP_ID` | App ID | `1:123:web:abc` | Client + Server |
-| `ANTHROPIC_API_KEY` | Anthropic API key per Claude | `sk-ant-api03-...` | Solo Server |
+**Important**:
+- The key is only shown once—save it securely
+- New accounts get $5 in free credits
+- Approximate cost: $0.05-$0.15 per PDF (10-20 recipes)
 
-⚠️ **NOTE**:
-- Tutte le variabili Firebase devono avere prefisso `NEXT_PUBLIC_` per essere accessibili nel client
-- `ANTHROPIC_API_KEY` NON deve avere il prefisso `NEXT_PUBLIC_` (usata solo nelle API routes server-side)
+### Step 7: Configure Environment Variables
 
----
-
-## 🔧 Sviluppo
-
-### Setup Ambiente di Sviluppo
+Create `.env.local` file in the project root:
 
 ```bash
-# Clona e installa
-git clone https://github.com/GiuseppeDM98/il-mio-ricettario.git
-cd il-mio-ricettario
-npm install
-
-# Crea .env.local con credenziali Firebase
 cp .env.example .env.local
+```
 
-# Avvia dev server con hot reload
+Edit `.env.local` with your credentials:
+
+```env
+# Firebase Configuration (all 6 values from Step 5)
+NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key_here
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+
+# Anthropic AI Configuration (from Step 6)
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
+
+# Optional: Toggle user registrations
+NEXT_PUBLIC_REGISTRATIONS_ENABLED=true
+```
+
+**Environment Variable Reference**:
+
+| Variable | Required | Scope | Description |
+|----------|----------|-------|-------------|
+| `NEXT_PUBLIC_FIREBASE_API_KEY` | Yes | Client+Server | Firebase Web API key |
+| `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | Yes | Client+Server | Firebase authentication domain |
+| `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | Yes | Client+Server | Firebase project identifier |
+| `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | Yes | Client+Server | Cloud Storage bucket URL |
+| `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | Yes | Client+Server | Firebase Cloud Messaging sender ID |
+| `NEXT_PUBLIC_FIREBASE_APP_ID` | Yes | Client+Server | Firebase app identifier |
+| `ANTHROPIC_API_KEY` | Yes* | **Server Only** | Claude API key for PDF extraction |
+| `NEXT_PUBLIC_REGISTRATIONS_ENABLED` | No | Client+Server | Enable/disable new user registrations |
+
+\* Required for AI features. The app works without it for manual recipe entry.
+
+**Security Note**:
+- Variables with `NEXT_PUBLIC_` prefix are exposed to the browser
+- `ANTHROPIC_API_KEY` does NOT have this prefix—it's server-only for security
+
+### Step 8: Run the Application
+
+```bash
+# Start the development server
 npm run dev
 ```
 
-### Struttura del Progetto
+The application will start at [http://localhost:3000](http://localhost:3000)
+
+**Test the Installation**:
+1. Open http://localhost:3000
+2. Register a new account
+3. Create a test recipe manually
+4. (Optional) Test PDF extraction with a small PDF file
+
+---
+
+## Tech Stack
+
+### Frontend
+
+- **[Next.js 14.2](https://nextjs.org/)** - React framework with App Router
+  - Server and client components
+  - File-based routing
+  - API routes for backend functionality
+  - Standalone output mode for optimized deployment
+
+- **[React 18.2](https://react.dev/)** - UI library
+  - Concurrent features for better performance
+  - Hooks for state management
+  - Server components support
+
+- **[TypeScript 5.3](https://www.typescriptlang.org/)** - Static type checking
+  - Strict mode enabled
+  - Full type safety across the codebase
+  - Enhanced developer experience with IntelliSense
+
+- **[Tailwind CSS 3.4](https://tailwindcss.com/)** - Utility-first CSS framework
+  - Custom HSL design system
+  - Responsive breakpoints (custom 1440px `lg` breakpoint)
+  - Mobile-first approach
+
+### UI Components
+
+- **[Radix UI](https://www.radix-ui.com/)** - Accessible component primitives
+  - Dialog, Toast, Sheet components
+  - Unstyled and accessible by default
+  - WAI-ARIA compliant
+
+- **[Lucide React](https://lucide.dev/)** - Icon library
+  - 500+ consistent icons
+  - Tree-shakeable for optimal bundle size
+  - Customizable size and color
+
+- **[class-variance-authority](https://cva.style/)** - Type-safe component variants
+  - Consistent component API
+  - TypeScript autocompletion
+  - Better DX for component styling
+
+### Backend & Services
+
+- **[Firebase Auth 10.7](https://firebase.google.com/docs/auth)** - Authentication
+  - Email/password authentication
+  - Google OAuth provider
+  - Session management
+  - Secure token refresh
+
+- **[Cloud Firestore 10.7](https://firebase.google.com/docs/firestore)** - NoSQL database
+  - Real-time synchronization
+  - Offline support
+  - Powerful querying
+  - Automatic scaling
+
+- **[Anthropic Claude API](https://www.anthropic.com/api)** - AI-powered features
+  - Claude Sonnet 4.5 model
+  - 200K token context window
+  - Native PDF support
+  - Vision capabilities for document analysis
+
+### Key Libraries
+
+- **[nosleep.js 0.12](https://github.com/richtr/NoSleep.js/)** - Screen wake lock
+  - Prevents device sleep during cooking mode
+  - Cross-browser compatible
+  - No permissions required
+
+- **[uuid 9.0](https://github.com/uuidjs/uuid)** - Unique ID generation
+  - v4 (random) UUIDs for ingredients and steps
+  - RFC4122 compliant
+
+- **[react-hot-toast 2.6](https://react-hot-toast.com/)** - Toast notifications
+  - Beautiful, customizable toasts
+  - Promise-based API
+  - Keyboard accessible
+
+- **[zod 4.1](https://zod.dev/)** - Runtime type validation
+  - TypeScript-first schema validation
+  - Type inference
+  - Error messages
+
+### Development Tools
+
+- **[Jest 30.2](https://jestjs.io/)** - Testing framework
+  - Unit and integration tests
+  - Snapshot testing
+  - Coverage reporting
+
+- **[@testing-library/react 16.3](https://testing-library.com/react)** - Testing utilities
+  - User-centric testing approach
+  - Best practices encouraged
+  - Accessible queries
+
+- **[ESLint 8.x](https://eslint.org/)** - Code linting
+  - Next.js recommended rules
+  - Catches common errors
+  - Enforces code style
+
+### Security
+
+- **Package Overrides** (via package.json):
+  - `glob >= 10.4.6` - Fixes security vulnerabilities
+  - `undici >= 6.21.2` - Patches HTTP client vulnerabilities
+
+---
+
+## Architecture & Design Decisions
+
+Understanding the "why" behind key technical choices.
+
+### Project Structure
 
 ```
-il-mio-ricettario/
-├── src/
-│   ├── app/                           # Next.js App Router
-│   │   ├── api/                      # API Routes (Server-side)
-│   │   │   └── extract-recipes/     # Endpoint AI per estrazione ricette
-│   │   │       └── route.ts         # POST /api/extract-recipes
-│   │   ├── (auth)/                   # Route group: autenticazione
-│   │   │   ├── login/page.tsx
-│   │   │   └── register/page.tsx
-│   │   ├── (dashboard)/              # Route group: app principale
-│   │   │   ├── layout.tsx           # Layout con Header/Sidebar/Footer
-│   │   │   ├── ricette/
-│   │   │   │   ├── page.tsx         # Lista ricette
-│   │   │   │   ├── new/page.tsx     # Crea ricetta
-│   │   │   │   └── [id]/
-│   │   │   │       ├── page.tsx     # Dettaglio ricetta
-│   │   │   │       ├── edit/page.tsx
-│   │   │   │       └── cooking/page.tsx  # Modalità cooking
-│   │   │   ├── categorie/page.tsx
-│   │   │   ├── cotture-in-corso/page.tsx  # Dashboard cotture attive
-│   │   │   └── estrattore-ricette/page.tsx # UI estrattore AI
-│   │   ├── layout.tsx               # Root layout (AuthProvider)
-│   │   └── page.tsx                 # Home (redirect)
-│   │
-│   ├── components/
-│   │   ├── ui/                      # Componenti base (Button, Input, Card, etc.)
-│   │   ├── auth/                    # Auth-related components
-│   │   │   ├── auth-form.tsx
-│   │   │   └── protected-route.tsx
-│   │   ├── recipe/                  # Recipe-specific components
-│   │   │   ├── recipe-form.tsx      # Form con gestione sezioni
-│   │   │   ├── recipe-card.tsx
-│   │   │   ├── recipe-detail.tsx
-│   │   │   ├── ingredient-list-collapsible.tsx
-│   │   │   ├── steps-list-collapsible.tsx
-│   │   │   ├── category-selector.tsx
-│   │   │   ├── recipe-extractor-upload.tsx  # UI upload PDF
-│   │   │   └── extracted-recipe-preview.tsx # Anteprima ricetta estratta
-│   │   └── layout/                  # Layout components
-│   │       ├── header.tsx
-│   │       ├── sidebar.tsx
-│   │       ├── footer.tsx
-│   │       └── mobile-nav.tsx
-│   │
-│   ├── lib/
-│   │   ├── firebase/                # Firebase services layer
-│   │   │   ├── config.ts           # Firebase init
-│   │   │   ├── auth.ts             # Auth helpers
-│   │   │   ├── firestore.ts        # Recipe CRUD
-│   │   │   ├── categories.ts       # Categories CRUD + defaults
-│   │   │   ├── cooking-sessions.ts # Sessioni cottura CRUD
-│   │   │   └── storage.ts          # File upload (futuro)
-│   │   ├── hooks/                   # Custom React hooks
-│   │   │   ├── useAuth.ts          # Re-export da auth-context
-│   │   │   ├── useRecipes.ts       # Fetch ricette user
-│   │   │   └── useToast.ts         # Toast notifications
-│   │   ├── context/
-│   │   │   └── auth-context.tsx    # AuthProvider globale
-│   │   └── utils/
-│   │       ├── cn.ts               # classnames utility
-│   │       ├── validation.ts       # Zod schemas
-│   │       ├── formatting.ts       # Time/date formatting
-│   │       ├── constants.ts        # App constants
-│   │       └── recipe-parser.ts    # Parser markdown → ricette strutturate
-│   │
-│   └── types/
-│       └── index.ts                 # TypeScript types globali
-│
-├── firebase/
-│   ├── firestore.rules              # Security rules (userId-based)
-│   └── firestore.indexes.json       # Query indexes
-│
-├── public/                          # Static assets
-├── docs/                            # Design documents
-│   ├── DD1-foundation-mvp.md
-│   ├── DD2-advanced-features.md
-│   └── DD3-ai-magic.md
-│
-├── .env.local                       # Environment variables (git-ignored)
-├── .env.example                     # Template env vars
-├── next.config.js
-├── tailwind.config.ts
-├── tsconfig.json
-├── jest.config.js
-├── AGENTS.md                        # AI coding guidelines
-└── package.json
+src/
+├── app/
+│   ├── (auth)/              # Public authentication routes
+│   │   ├── login/           # Login page
+│   │   └── register/        # Registration page
+│   ├── (dashboard)/         # Protected application routes
+│   │   ├── ricette/         # Recipe list, detail, edit, cooking mode
+│   │   │   ├── [id]/        # Dynamic recipe routes
+│   │   │   │   ├── edit/    # Edit recipe page
+│   │   │   │   └── cooking/ # Cooking mode
+│   │   │   └── new/         # Create recipe page
+│   │   ├── categorie/       # Category management
+│   │   ├── cotture-in-corso/ # Active cooking sessions dashboard
+│   │   └── estrattore-ricette/ # AI PDF extractor interface
+│   └── api/                 # Server-side API routes
+│       ├── extract-recipes/ # PDF extraction endpoint
+│       └── suggest-category/ # AI categorization endpoint
+├── components/
+│   ├── ui/                  # Base UI components (Button, Card, Input, etc.)
+│   ├── recipe/              # Recipe-specific components
+│   │   ├── recipe-form.tsx
+│   │   ├── recipe-card.tsx
+│   │   ├── ingredient-list.tsx
+│   │   └── steps-list.tsx
+│   ├── auth/                # Authentication components
+│   │   ├── auth-form.tsx
+│   │   └── protected-route.tsx
+│   └── layout/              # Layout components
+│       ├── header.tsx
+│       ├── sidebar.tsx
+│       ├── bottom-navigation.tsx
+│       └── more-sheet.tsx
+├── lib/
+│   ├── firebase/            # Firebase service layer
+│   │   ├── config.ts        # Firebase initialization (singleton)
+│   │   ├── auth.ts          # Auth helpers
+│   │   ├── firestore.ts     # Firestore CRUD operations
+│   │   ├── categories.ts    # Category management
+│   │   └── cooking-sessions.ts # Session management
+│   ├── hooks/               # Custom React hooks
+│   │   ├── useAuth.ts       # Authentication hook
+│   │   └── useRecipes.ts    # Recipe data fetching
+│   ├── context/             # React context providers
+│   │   └── AuthContext.tsx  # Global auth state
+│   └── utils/               # Utility functions
+│       ├── recipe-parser.ts # Markdown → Recipe parser
+│       └── ingredient-scaler.ts # Quantity scaling logic
+└── types/
+    └── index.ts             # TypeScript type definitions
 ```
 
-### Convenzioni di Codice
+### Key Architectural Decisions
 
-#### Naming
-- **React components**: PascalCase (`RecipeForm.tsx`)
-- **Hooks/utilities**: camelCase (`useRecipes.ts`, `validation.ts`)
-- **Route folders**: kebab-case (`ricette/`, `[id]/`)
+#### 1. Standalone Next.js Build
 
-#### Import Aliases
+**Decision**: Use `output: 'standalone'` in Next.js configuration
+
+**Why**:
+- Creates a self-contained build with all dependencies bundled
+- Optimized for deployment to Vercel, Docker, or any Node.js environment
+- Significantly smaller bundle size compared to default output
+- Faster cold starts in serverless environments
+
+**Trade-off**:
+- Cannot use static export features (but we prioritize dynamic API routes)
+
+**Benefit**:
+- 40-50% reduction in deployment size
+- Better performance in production
+
+---
+
+#### 2. Owner-Based Security Model
+
+**Decision**: Every Firestore document has a `userId` field, enforced by security rules
+
+**Why**:
+- Multi-tenant architecture: One Firestore database serves all users
+- Strong data isolation: Users can only access their own data
+- GDPR-friendly: Clear data ownership and easy user deletion
+- Cost-effective: No need for separate database instances
+
+**Implementation**:
+```javascript
+// Firestore security rules
+match /recipes/{recipeId} {
+  allow read, update, delete: if isOwner(resource.data.userId);
+  allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+}
+```
+
+**Alternative Considered**:
+- Separate Firestore projects per user (rejected: cost prohibitive, complex management)
+
+**Benefit**:
+- Bulletproof privacy
+- Scales to millions of users on free tier
+- Easy to audit and verify security
+
+---
+
+#### 3. Sectioned Data Model (Flat Arrays)
+
+**Decision**: Use flat arrays with `section` field instead of nested objects
+
+**Why**:
+- Firestore has limitations with deeply nested queries
+- Easier to filter and sort (e.g., "show only ingredients in section X")
+- Simpler to scale quantities across all ingredients
+- Better performance for large recipes
+
+**Data Structure**:
 ```typescript
-// Usa sempre alias @/
-import { Recipe } from '@/types'
-import { useAuth } from '@/lib/hooks/useAuth'
-import { Button } from '@/components/ui/button'
+ingredients: [
+  { id: "1", name: "Flour", quantity: "500g", section: "For the dough" },
+  { id: "2", name: "Eggs", quantity: "2", section: "For the dough" },
+  { id: "3", name: "Tomato sauce", quantity: "200ml", section: "For the filling" }
+]
 ```
+
+**Alternative Considered**:
+```typescript
+// Rejected: Nested structure
+sections: {
+  "For the dough": {
+    ingredients: [...]
+  }
+}
+```
+
+**Benefit**:
+- Firestore queries work smoothly
+- Easy to reorder sections
+- Compatible with array operators
+
+---
+
+#### 4. API Routes for AI (Server-Side Only)
+
+**Decision**: Keep AI functionality in Next.js API routes, not client-side
+
+**Why**:
+- **Security**: Anthropic API key never exposed to browser
+- **Cost Control**: All API calls logged and rate-limited server-side
+- **Consistency**: Same AI model and prompt for all users
+- **Error Handling**: Better error messages and retry logic
+
+**Implementation**:
+```typescript
+// src/app/api/extract-recipes/route.ts
+// ANTHROPIC_API_KEY is server-only (no NEXT_PUBLIC_ prefix)
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY
+});
+```
+
+**Alternative Considered**:
+- Client-side AI calls (rejected: security risk, no cost control)
+
+**Benefit**:
+- Zero risk of API key leakage
+- Can implement sophisticated rate limiting
+- Centralized logging and monitoring
+
+---
+
+#### 5. Setup Screen Pattern (Cooking Sessions)
+
+**Decision**: Use a setup screen to select servings before entering cooking mode
+
+**Why**:
+- Prevents duplicate session creation (common bug with useEffect-based approaches)
+- Explicit user intent: User consciously starts cooking
+- Opportunity to configure (serving size selection)
+- Cleaner state management
+
+**Flow**:
+```
+Recipe Detail → Click "Start Cooking" → Setup Screen (select servings)
+→ Create Session → Cooking Mode
+```
+
+**Alternative Rejected**:
+```typescript
+// Anti-pattern: useEffect automatically creates session
+useEffect(() => {
+  if (!session) {
+    createCookingSession(recipeId);
+  }
+}, [recipeId]);
+```
+**Problem**: Creates multiple sessions on re-renders, race conditions
+
+**Benefit**:
+- Reliable session creation (one session per cooking attempt)
+- Better UX: user has control
+- Easier to test
+
+---
+
+#### 6. 1440px Breakpoint (Non-Standard)
+
+**Decision**: Use 1440px as the `lg` breakpoint instead of standard 1024px
+
+**Why**:
+- **Standard breakpoints**: 1024px typically separates tablet from desktop
+- **Our use case**: Tablets (like iPad at 1024px) are better served by mobile UI while cooking
+- **Rationale**:
+  - Mobile UI has bottom navigation (easier to reach with messy hands)
+  - Sidebar navigation requires cleaner hands and more precision
+  - 1440px better separates "actual desktop" from "tablet/laptop"
+
+**Implementation**:
+```javascript
+// tailwind.config.ts
+module.exports = {
+  theme: {
+    screens: {
+      sm: '640px',
+      md: '768px',
+      lg: '1440px',  // Custom: Higher than standard 1024px
+      xl: '1536px',
+    }
+  }
+}
+```
+
+**Mobile-Specific Styles**:
+```typescript
+// Use max-lg:portrait: not just portrait:
+className="max-lg:portrait:block hidden"
+```
+
+**Benefit**:
+- Better experience on tablets
+- More users get the optimized cooking UI
+- Desktop users get full sidebar experience
+
+---
+
+#### 7. AGPL-3.0 License
+
+**Decision**: Use AGPL-3.0 instead of MIT or Apache 2.0
+
+**Why**:
+- **Strong Copyleft**: Ensures modifications remain open source
+- **Network Use = Distribution**: If you host this as a SaaS, you must provide source to users
+- **Community Protection**: Prevents proprietary forks that don't give back
+- **Philosophical Alignment**: Recipe knowledge should be shared freely
+
+**Implications**:
+- Commercial use allowed
+- Modifications allowed
+- But: Must publish modifications if you host publicly
+- SaaS deployments must provide source code access
+
+**Alternative Considered**:
+- MIT License (rejected: too permissive, allows proprietary forks)
+
+**Benefit**:
+- Guarantees project stays open forever
+- Encourages community contributions
+- Aligns with values of food and recipe sharing
+
+---
+
+### Data Flow Diagrams
+
+**Recipe CRUD Flow**:
+```
+User Action (Create/Edit)
+    ↓
+Component (RecipeForm)
+    ↓
+Firebase Service Layer (firestore.ts)
+    ↓
+Cloud Firestore (Firebase)
+    ↓
+Security Rules Enforcement
+    ↓
+Database Persistence
+    ↓
+Real-time Update to UI
+```
+
+**AI Extraction Flow**:
+```
+User Uploads PDF
+    ↓
+Client Validation (size, type)
+    ↓
+POST /api/extract-recipes
+    ↓
+Server reads file, converts to base64
+    ↓
+Claude API call (Sonnet 4.5)
+    ↓
+Markdown response
+    ↓
+Parser (recipe-parser.ts)
+    ↓
+Structured recipe objects
+    ↓
+Preview component (editable)
+    ↓
+User saves → Firestore
+```
+
+**Cooking Mode Flow**:
+```
+Recipe Detail Page
+    ↓
+User clicks "Start Cooking"
+    ↓
+Setup Screen (select servings)
+    ↓
+Create Cooking Session (Firestore)
+    ↓
+Cooking UI (checkboxes, wake lock)
+    ↓
+Checkbox changes → Auto-save to Firestore
+    ↓
+100% complete → Auto-delete session
+```
+
+---
+
+## Development
+
+Guide for developers working on the codebase.
+
+### Available Scripts
+
+| Script | Command | Description |
+|--------|---------|-------------|
+| **Development** | `npm run dev` | Start Next.js development server on port 3000 with hot reload |
+| **Build** | `npm run build` | Create production build (standalone mode) |
+| **Start** | `npm run start` | Start production server (requires build first) |
+| **Export** | `npm run export` | Build and export static site for Firebase Hosting |
+| **Test** | `npm run test` | Run Jest test suite |
+| **Lint** | `npm run lint` | Run ESLint checks |
+
+### Coding Conventions
 
 #### TypeScript
-- Tutti i types in `src/types/index.ts`
-- Usa `interface` per domain models, `type` per utilities
-- Evita `any`, usa `unknown` se necessario
 
-#### Styling
-- Usa Tailwind utility classes
-- Semantic colors: `bg-primary`, `text-muted-foreground`
-- Mobile-first: aggiungi breakpoints `sm:`, `md:`, `lg:`
-- Usa `cn()` utility per conditional classes:
-  ```tsx
-  <div className={cn("base-class", isActive && "active-class")} />
-  ```
+- **Type Definitions**: All types are centralized in `src/types/index.ts`
+- **Interfaces vs Types**:
+  - Use `interface` for domain models (e.g., `Recipe`, `Category`)
+  - Use `type` for utility types (e.g., type aliases, unions)
+- **Strict Mode**: Always enabled—no `any` types allowed
+  - Use `unknown` if type is truly unknown, then narrow with type guards
+- **Export Pattern**: Named exports preferred over default exports
 
-### Build del Progetto
+**Example**:
+```typescript
+// src/types/index.ts
+export interface Recipe {
+  id: string;
+  userId: string;
+  title: string;
+  ingredients: Ingredient[];
+  steps: Step[];
+  // ...
+}
 
-```bash
-# Build per produzione (standalone)
-npm run build
+// Good
+import { Recipe } from '@/types';
 
-# Analizza output
-ls -lah .next/
-
-# Test build locally
-npm run start
+// Avoid
+import Recipe from '@/types';
 ```
 
-Output in `.next/standalone/` pronto per deployment.
+#### React Patterns
 
-### Esecuzione dei Test
+- **Client Components**: All page components use `'use client'` directive
+- **Server Components**: Only API routes are server-side
+- **Hooks**: Custom hooks in `src/lib/hooks/`, prefixed with `use`
+- **Context**: Global state in `src/lib/context/`, minimal usage
+
+**Example**:
+```typescript
+// Page component
+'use client';
+
+import { useAuth } from '@/lib/hooks/useAuth';
+
+export default function RecipesPage() {
+  const { user } = useAuth();
+  // ...
+}
+```
+
+#### Firebase Best Practices
+
+**Critical Rule**: Use `null` for optional fields, never `undefined`
+
+**Why**: Firestore doesn't store `undefined` values, leading to inconsistencies
+
+```typescript
+// ✅ Good
+const recipe = {
+  categoryId: selectedCategory?.id || null,
+  prepTime: prepTimeValue || null
+};
+
+// ❌ Bad - undefined fields won't be saved
+const recipe = {
+  categoryId: selectedCategory?.id,
+  prepTime: prepTimeValue
+};
+```
+
+**Query Pattern**: Always filter by `userId`
+
+```typescript
+// ✅ Good
+const recipesRef = collection(db, 'recipes');
+const q = query(recipesRef, where('userId', '==', userId));
+
+// ❌ Bad - returns all users' recipes
+const q = query(recipesRef);
+```
+
+**Timestamps**: Use `serverTimestamp()` for consistency
+
+```typescript
+import { serverTimestamp } from 'firebase/firestore';
+
+const recipe = {
+  // ...
+  createdAt: serverTimestamp(),
+  updatedAt: serverTimestamp()
+};
+```
+
+#### Styling Guidelines
+
+- **Tailwind Only**: No custom CSS files (except global.css for base styles)
+- **Semantic Tokens**: Use design system variables
+  - `bg-primary`, `text-primary`, `border-primary`
+  - `bg-secondary`, `text-secondary`
+  - `bg-muted`, `text-muted-foreground`
+  - `bg-destructive`, `text-destructive-foreground`
+- **Mobile-First**: Add breakpoints progressively
+  - Base styles = mobile
+  - `sm:` = 640px+
+  - `md:` = 768px+
+  - `lg:` = 1440px+
+- **Responsive Navigation**: Use `max-lg:portrait:` for mobile-specific styles
+
+```typescript
+// ✅ Good - Mobile-first, semantic tokens
+<button className="bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90 sm:px-6 sm:py-3">
+  Save Recipe
+</button>
+
+// ✅ Good - Orientation-specific
+<nav className="max-lg:portrait:block max-lg:landscape:hidden lg:block">
+  {/* Navigation content */}
+</nav>
+
+// ❌ Bad - Custom colors, desktop-first
+<button className="bg-blue-600 text-white lg:hidden">
+  Save
+</button>
+```
+
+**Utility Function**: Use `cn()` for conditional classes
+
+```typescript
+import { cn } from '@/lib/utils';
+
+<div className={cn(
+  "base-class",
+  isActive && "active-class",
+  isDisabled && "disabled-class"
+)}>
+  Content
+</div>
+```
+
+### Testing
+
+#### Running Tests
 
 ```bash
 # Run all tests
 npm test
 
-# Run tests in watch mode
+# Watch mode (re-runs on file changes)
 npm test -- --watch
 
-# Run tests with coverage
+# Coverage report
 npm test -- --coverage
 
 # Run specific test file
-npm test -- src/components/layout/header.test.tsx
+npm test -- Header.test.tsx
 ```
 
-#### Scrivere Test
+#### Writing Tests
 
-Esempio test component:
+**Setup**: Tests use Jest + React Testing Library
+
+**Example Test**:
 ```typescript
-// src/components/recipe/recipe-card.test.tsx
-import { render, screen } from '@testing-library/react'
-import { RecipeCard } from './recipe-card'
+// src/components/layout/__tests__/Header.test.tsx
+import { render, screen } from '@testing-library/react';
+import Header from '../Header';
 
+// Mock Firebase auth
+jest.mock('@/lib/firebase/config', () => ({
+  auth: {}
+}));
+
+// Mock auth hook
 jest.mock('@/lib/hooks/useAuth', () => ({
-  useAuth: () => ({ user: { uid: 'test-user' } })
-}))
-
-describe('RecipeCard', () => {
-  it('renders recipe title', () => {
-    const recipe = {
-      id: '1',
-      title: 'Test Recipe',
-      // ... altri campi
-    }
-
-    render(<RecipeCard recipe={recipe} />)
-    expect(screen.getByText('Test Recipe')).toBeInTheDocument()
+  useAuth: () => ({
+    user: { uid: '123', email: 'test@example.com' },
+    signOut: jest.fn()
   })
-})
+}));
+
+describe('Header', () => {
+  it('renders user email when authenticated', () => {
+    render(<Header />);
+    expect(screen.getByText('test@example.com')).toBeInTheDocument();
+  });
+});
 ```
 
-### Linting e Type Checking
-
-```bash
-# ESLint check
-npm run lint
-
-# Auto-fix linting issues
-npm run lint -- --fix
-
-# TypeScript check (no output)
-npx tsc --noEmit
-```
-
----
-
-## 🚀 Deployment
-
-### Deploy su Firebase Hosting
-
-#### 1. Build statico (Next.js export)
-
-Modifica `next.config.js`:
-```javascript
-module.exports = {
-  output: 'export',  // Cambia da 'standalone' a 'export'
-  // ... resto config
-}
-```
-
-```bash
-# Build e export
-npm run build
-# Output in /out
-```
-
-#### 2. Deploy con Firebase CLI
-
-```bash
-# Prima volta: inizializza hosting
-firebase init hosting
-
-# Configura:
-# - Public directory: out
-# - Single-page app: Yes
-# - Overwrite index.html: No
-
-# Deploy
-firebase deploy --only hosting
-```
-
-#### 3. Verifica deployment
-
-```bash
-# Output mostrerà:
-# ✔  Deploy complete!
-# Hosting URL: https://il-mio-ricettario.web.app
-```
-
-### Deploy su Vercel (Alternativa)
-
-```bash
-# Installa Vercel CLI
-npm i -g vercel
-
-# Deploy
-vercel
-
-# Production deploy
-vercel --prod
-```
-
-Vercel rileva automaticamente Next.js e configura:
-- Environment variables (aggiungi nel dashboard)
-- Automatic HTTPS
-- Edge functions
-- Build cache
-
-### Variabili d'Ambiente in Produzione
-
-**Firebase Hosting**: Crea `firebase.json`:
-```json
-{
-  "hosting": {
-    "public": "out",
-    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
-    "rewrites": [{ "source": "**", "destination": "/index.html" }],
-    "headers": [{
-      "source": "**",
-      "headers": [{
-        "key": "Cache-Control",
-        "value": "public, max-age=3600"
-      }]
-    }]
-  }
-}
-```
-
-**Vercel**: Aggiungi env vars nel dashboard:
-1. Project Settings → Environment Variables
-2. Aggiungi tutte le variabili:
-   - `NEXT_PUBLIC_FIREBASE_*` (tutte le 6 variabili Firebase)
-   - `ANTHROPIC_API_KEY` (per estrattore AI)
-3. Select environments: Production, Preview, Development
-
----
-
-## 🤖 Architettura Estrattore AI
-
-### Flusso di Estrazione (Vercel API Route)
-
-```
-1. Selezione PDF (Frontend)
-   ↓
-2. Validazione client-side (size max 4.4MB, type PDF)
-   ↓
-3. Upload tramite FormData (Frontend → Vercel API Route)
-   │  - POST /api/extract-recipes
-   │  - Content-Type: multipart/form-data
-   ↓
-4. API Route (Server-side Next.js)
-   │  a) Validazione (max 4.4MB, tipo PDF)
-   │  b) Conversione PDF → Base64
-   │  c) Chiamata Claude API (Anthropic)
-   │     - Model: claude-sonnet-4-5
-   │     - Max tokens: 16000
-   │     - Native PDF support
-   │     - Prompt strutturato con istruzioni dettagliate
-   ↓
-5. Risposta Claude (Markdown formattato)
-   ↓
-6. Return a Frontend con ricette estratte
-   ↓
-7. Parsing Markdown → ParsedRecipe[] (recipe-parser.ts)
-   │  - Estrazione titoli (# headings)
-   │  - Parsing sezioni ingredienti (## Ingredienti per...)
-   │  - Parsing sezioni procedimento (## Procedimento per...)
-   │  - Estrazione metadati (porzioni, tempi)
-   │  - Normalizzazione nomi sezioni
-   │  - Conversione tempi in minuti
-   ↓
-8. Anteprima ricette estratte (Frontend)
-   ↓
-9. Salvataggio selettivo in Firestore
-```
-
-**Caratteristiche architettura**:
-- ✅ API key Anthropic protetta server-side in API route
-- ✅ Nessun setup aggiuntivo richiesto (oltre a Vercel)
-- ✅ Architettura semplice e diretta
-- ✅ Dati Firebase-compatible: campi opzionali usano `null` invece di `undefined`
-- ⚠️ Limite body size Vercel: 4.4MB
-- 💡 Per PDF più grandi: usare servizi di compressione esterni (iLovePDF)
-
-### Componenti Chiave
-
-#### API Route ([src/app/api/extract-recipes/route.ts](src/app/api/extract-recipes/route.ts))
-- **Endpoint**: `POST /api/extract-recipes`
-- **Tipo**: Next.js API Route (Server-side)
-- **Input**: FormData con PDF file
-- **Output**: `{ success: boolean, extractedRecipes: string }`
-- **Validazioni**:
-  - Autenticazione (richiesta da client autenticato)
-  - File type: `application/pdf`
-  - Max size: 4.4MB (limite Vercel body size)
-- **Security**:
-  - API key Anthropic in variabile d'ambiente `ANTHROPIC_API_KEY`
-  - Non esposta nel client (solo server-side)
-  - Validazione lato server
-
-#### Parser (`src/lib/utils/recipe-parser.ts`)
-- **Funzione principale**: `parseExtractedRecipes(markdownText: string): ParsedRecipe[]`
-- **Pattern matching**:
-  - Separatore ricette: `---\s*---`
-  - Titolo ricetta: `# [Nome]`
-  - Sezioni ingredienti: `## Ingredienti (per ...)?`
-  - Sezioni procedimento: `## Procedimento (per ...)?`
-  - Metadati: `**Porzioni:**`, `**Tempo di preparazione:**`
-- **Normalizzazioni**:
-  - Titoli: conversione da CAPS LOCK a Title Case ("PATATE AL FORNO" → "Patate al forno")
-  - Capitalizzazione sezioni ("per la pasta" → "Per la pasta")
-  - Parsing tempi ("2 ore 30 min" → 150 minuti)
-  - Tracking `sectionOrder` per preservare ordine originale sezioni dal PDF
-  - Generazione UUID per ingredienti/step
-  - Campi opzionali: uso di `null` invece di `undefined` per compatibilità Firebase
-
-#### UI Components
-- **RecipeExtractorUpload**: Drag & drop / file picker per PDF
-- **ExtractedRecipePreview**: Card anteprima ricetta con edit inline
-- **Page**: `/estrattore-ricette` - Orchestrazione completa del flusso
-
-### Prompt Engineering
-
-Il prompt Claude è ottimizzato per:
-- **Completezza**: Estrarre TUTTE le ricette (non solo la prima)
-- **Struttura**: Preservare sezioni originali
-- **Precisione**: Nomi sezioni esatti dal documento
-- **Flessibilità**: Gestire formati diversi
-- **Robustezza**: Gestire indici, note, suggerimenti
-
-Vedi codice completo in [`src/app/api/extract-recipes/route.ts`](src/app/api/extract-recipes/route.ts).
-
-### Costi e Limiti
-
-**Claude API**:
-- Model: `claude-sonnet-4-5`
-- Costo ~$3 per 1M input tokens, $15 per 1M output tokens
-- 1 PDF tipico (10-20 ricette): ~$0.05-0.15
-- Max tokens output: 16000 (configurabile)
-- **Limite file**: 4.4MB (limite Vercel)
-
-**Firebase** (Piano gratuito):
-- **Firestore**:
-  - 20k scritture/giorno gratis
-  - 50k letture/giorno gratis
-  - Stima: gratis per uso personale
-
-**Vercel**:
-- Hosting frontend: Gratis
-- API routes: Incluse nel piano gratuito
-
-**Totale stimato per uso moderato**: <$1/mese (principalmente Claude API)
-
----
-
-## 🧠 AI Categorization & Seasonality
-
-### Architettura
-
-Il sistema di categorizzazione e stagionalità AI è completamente integrato nell'estrattore ricette:
-
-```
-PDF Upload
-    ↓
-Estrazione Ricette (Claude)
-    ↓
-Parsing Markdown
-    ↓
-Per ogni ricetta estratta:
-    ↓
-    ├─→ Analisi Titolo
-    ├─→ Analisi Ingredienti
-    ├─→ Categorie Utente Esistenti
-    ↓
-POST /api/suggest-category
-    ↓
-    ├─→ Prompt Engineering
-    │   ├─ Database ingredienti stagionali italiani
-    │   ├─ Categorie esistenti utente
-    │   ├─ Pattern matching categoria-ricetta
-    │   └─ Analisi stagionalità ingredienti
-    ↓
-Response:
-    ├─→ categoryName (esistente o nuova)
-    ├─→ season (primavera|estate|autunno|inverno|tutte_stagioni)
-    └─→ isNewCategory (boolean)
-    ↓
-UI Preview con badge "✨ Suggerito da AI"
-    ↓
-User Override (opzionale)
-    ↓
-Salvataggio:
-    ├─→ createCategoryIfNotExists()
-    │   ├─ Genera icona (pattern matching)
-    │   ├─ Genera colore (hash)
-    │   └─ Crea categoria se nuova
-    └─→ Salva ricetta con aiSuggested: true
-```
-
-### Database Ingredienti Stagionali Italiani
-
-Il sistema utilizza un database curato di ingredienti tipici della cucina italiana, organizzati per stagione:
-
-**Primavera**: asparagi, carciofi, fave, piselli, fragole, agretti, rucola, ravanelli, cipollotti, lattuga
-
-**Estate**: pomodori, melanzane, zucchine, peperoni, basilico, cetrioli, pesche, albicocche, melone, anguria, fagiolini
-
-**Autunno**: zucca, funghi, castagne, radicchio, cavolo, broccoli, uva, pere, mele, fichi
-
-**Inverno**: cavolo nero, cavolfiore, finocchi, agrumi, arance, mandarini, limoni, cime di rapa, porri, rape
-
-### Generazione Automatica Categorie
-
-Quando l'AI suggerisce una categoria non esistente:
-
-1. **Pattern Matching Icone**:
-   - "primi" → 🍝
-   - "dolci" → 🍰
-   - "secondi" → 🥩
-   - "zupp" → 🍲
-   - "pizza" → 🍕
-   - Default → 🍽️
-
-2. **Generazione Colori**:
-   - Hash del nome categoria
-   - Palette predefinita di 10 colori armoniosi
-   - Consistenza: stesso nome = stesso colore
-
-3. **Ordine Automatico**:
-   - Nuove categorie aggiunte in coda
-   - Mantiene ordine categorie esistenti
-
-### UI/UX Features
-
-**Estrattore Ricette**:
-- Badge blu "✨ Suggerito da AI" per trasparenza
-- Categoria editabile con input text
-- Indicatore "Nuova" per categorie da creare
-- Selettore stagione con 5 bottoni iconici
-- Valori pre-compilati dai suggerimenti
-
-**Form Ricette**:
-- SeasonSelector con icone grandi e intuitive
-- Badge "Suggerito da AI" se applicabile
-- Stagione modificabile anche post-creazione
-
-**Lista Ricette**:
-- Filtro stagione con conteggio (es. "☀️ Estate (12)")
-- Badge stagionale icona nell'angolo card
-- Filtro "Tutte" per vedere tutto
-
-**Dettaglio Ricetta**:
-- Badge stagione completo (icona + testo)
-- Stile distintivo per riconoscibilità immediata
-
-### Nuovi Componenti Tecnici
-
-#### API Routes
-- **`/api/suggest-category`** ([src/app/api/suggest-category/route.ts](src/app/api/suggest-category/route.ts)):
-  - Input: `{ recipeTitle, ingredients, userCategories }`
-  - Output: `{ categoryName, season, isNewCategory }`
-  - Database ingredienti stagionali italiani integrato
-  - Prompt engineering ottimizzato per cucina italiana
-
-#### Helper Functions
-- **`createCategoryIfNotExists()`** in [src/lib/firebase/categories.ts](src/lib/firebase/categories.ts):
-  - Verifica esistenza categoria
-  - Se non esiste, crea con icona/colore auto-generati
-  - Icone basate su pattern matching (primi→🍝, dolci→🍰, ecc.)
-  - Colori basati su hash del nome
-  - Ritorna ID categoria (esistente o nuova)
-
-- **`getAISuggestionForRecipe()`** in [src/lib/utils/recipe-parser.ts](src/lib/utils/recipe-parser.ts):
-  - Chiamata API `/suggest-category`
-  - Parsing response JSON
-  - Error handling con graceful degradation
-
-#### UI Components
-- **SeasonSelector** ([src/components/recipe/season-selector.tsx](src/components/recipe/season-selector.tsx)):
-  - 5 bottoni con icone stagionali (❄️ 🌸 ☀️ 🍂 🌍)
-  - Badge "Suggerito da AI" opzionale
-  - Design responsive e mobile-friendly
-
-- **Filtri Stagione** in [src/app/(dashboard)/ricette/page.tsx](src/app/(dashboard)/ricette/page.tsx):
-  - Barra filtri orizzontale con conteggio
-  - Filtro useMemo per performance
-  - Stato selezionato persistente nella sessione
-
----
-
-## 🧪 Testing Strategy
-
-### Coverage Attuale
-- ✅ Component testing configurato (Jest + Testing Library)
-- ✅ Esempio test: `src/components/layout/header.test.tsx`
-- ⚠️ Coverage limitato (work in progress)
-
-### Testing Roadmap
-- [ ] Unit tests per Firebase services (`lib/firebase/`)
-- [ ] Integration tests per auth flow
-- [ ] E2E tests per recipe CRUD (Playwright/Cypress)
-- [ ] Visual regression tests (Chromatic/Percy)
-
-### Mock Firebase in Tests
+**Best Practices**:
+- Mock external dependencies (Firebase, hooks)
+- Test user interactions, not implementation details
+- Use accessible queries (`getByRole`, `getByLabelText`)
+- Follow Testing Library principles
+
+### Debugging
+
+#### Firebase Debug Mode
 
 ```typescript
-// __mocks__/firebase/config.ts
-export const db = {} as any
-export const auth = {} as any
+// Enable detailed Firestore logs (development only)
+import { setLogLevel } from 'firebase/firestore';
 
-// In test file
-jest.mock('@/lib/firebase/config')
-jest.mock('firebase/firestore', () => ({
-  collection: jest.fn(),
-  getDocs: jest.fn(),
-  // ... altri mock
-}))
+if (process.env.NODE_ENV === 'development') {
+  setLogLevel('debug');
+}
+```
+
+#### Common Issues & Solutions
+
+**Issue**: "Firebase Auth not initialized"
+- **Cause**: Missing environment variables
+- **Solution**: Check `.env.local`, restart dev server
+
+**Issue**: "Permission denied" in Firestore
+- **Cause**: Security rules not deployed or query doesn't filter by `userId`
+- **Solution**:
+  ```bash
+  firebase deploy --only firestore:rules
+  ```
+  Check query includes `where('userId', '==', userId)`
+
+**Issue**: Module not found errors
+- **Cause**: TypeScript path aliases not resolving
+- **Solution**: Check `tsconfig.json` has correct paths configuration
+
+**Issue**: Hydration mismatch warnings
+- **Cause**: Browser-only code running on server
+- **Solution**: Use `'use client'` directive or check for `typeof window !== 'undefined'`
+
+---
+
+## Deployment
+
+Deploy Il Mio Ricettario to production. For detailed deployment instructions, see [SETUP.md](SETUP.md).
+
+### Option 1: Vercel (Recommended)
+
+**Best for**: Most users, especially those new to deployment
+
+**Advantages**:
+- Zero-configuration deployment
+- Automatic HTTPS and global CDN
+- Serverless functions for API routes (no server management)
+- Environment variable management in dashboard
+- Git integration (auto-deploy on push)
+- Free tier: 100GB bandwidth/month, unlimited projects
+
+**Limitations**:
+- 4.4MB request body limit (affects maximum PDF size)
+- 10-second serverless function timeout on free tier
+- Vendor lock-in to Vercel platform
+
+**Quick Deploy Steps**:
+1. Push code to GitHub
+2. Import project in [Vercel Dashboard](https://vercel.com/dashboard)
+3. Add environment variables (Firebase + Anthropic)
+4. Deploy
+5. Add Vercel domain to Firebase authorized domains
+
+**Full guide**: [SETUP.md](SETUP.md)
+
+---
+
+### Option 2: Firebase Hosting
+
+**Best for**: Users who want everything on Firebase, or need static hosting
+
+**Advantages**:
+- Same provider as Firestore (single dashboard)
+- Free tier: 10GB storage, 360MB/day transfer
+- Custom domains with auto-SSL
+- SPA-friendly hosting
+
+**Limitations**:
+- Static export only (no server-side rendering)
+- API routes require Cloud Functions setup (not covered in basic setup)
+- AI extraction features need extra configuration
+- Build-time environment variables only
+
+**Quick Deploy Steps**:
+1. Change `next.config.js` to `output: 'export'`
+2. Build: `npm run build`
+3. Deploy: `firebase deploy --only hosting`
+
+**Full guide**: [SETUP.md - Firebase Hosting](SETUP.md#firebase-hosting)
+
+---
+
+### Option 3: Docker (Self-Hosted)
+
+**Best for**: Users who want full control or private infrastructure
+
+**Advantages**:
+- Complete control over infrastructure
+- No vendor lock-in
+- Can deploy anywhere (AWS, GCP, Azure, DigitalOcean, etc.)
+- Customizable resource allocation
+
+**Dockerfile**:
+```dockerfile
+FROM node:18-alpine AS base
+
+# Install dependencies
+FROM base AS deps
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+
+# Build application
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+RUN npm run build
+
+# Production image
+FROM base AS runner
+WORKDIR /app
+
+ENV NODE_ENV production
+
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+USER nextjs
+
+EXPOSE 3000
+
+ENV PORT 3000
+
+CMD ["node", "server.js"]
+```
+
+**Build and Run**:
+```bash
+# Build image
+docker build -t il-mio-ricettario .
+
+# Run container
+docker run -p 3000:3000 \
+  -e NEXT_PUBLIC_FIREBASE_API_KEY=your_key \
+  -e ANTHROPIC_API_KEY=your_key \
+  il-mio-ricettario
+```
+
+**Docker Compose**:
+```yaml
+version: '3.8'
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env.local
+    restart: unless-stopped
 ```
 
 ---
 
-## 🤝 Contribuire
+## Database Schema
 
-### Workflow
+Firestore collections and document structures.
 
-1. **Fork** il repository
-2. **Crea un branch** per la tua feature:
-   ```bash
-   git checkout -b feature/amazing-feature
-   ```
-3. **Commit** le modifiche:
-   ```bash
-   git commit -m 'Add amazing feature'
-   ```
-4. **Push** al branch:
-   ```bash
-   git push origin feature/amazing-feature
-   ```
-5. **Apri una Pull Request**
+### Collections Overview
 
-### Linee Guida
+- `users/{uid}` - User profiles
+- `recipes/{id}` - Recipe documents
+- `categories/{id}` - User-created categories
+- `subcategories/{id}` - Subcategories nested under categories
+- `cooking_sessions/{id}` - Active cooking progress tracking
 
-- Segui le convenzioni in [AGENTS.md](AGENTS.md)
-- Scrivi test per nuove feature
-- Aggiorna la documentazione se necessario
-- Usa commit messages descrittivi
-- Mantieni il codice TypeScript strict-compliant
+### users/{uid}
 
-### Code Review Checklist
+User profile information.
 
-- [ ] TypeScript errors: `npx tsc --noEmit` passa
-- [ ] Linting: `npm run lint` passa
-- [ ] Tests: `npm test` passa
-- [ ] Build: `npm run build` success
-- [ ] Firestore rules aggiornate se nuove collections
-- [ ] README aggiornato se nuove feature
-- [ ] Commenti in inglese (come da AGENTS.md)
-
----
-
-## 📊 Database Schema
-
-### Firestore Collections
-
-#### `users`
 ```typescript
-{
-  uid: string                    // Firebase Auth UID
-  email: string
-  displayName: string | null
-  photoURL: string | null
-  createdAt: Timestamp
-  updatedAt: Timestamp
+interface User {
+  uid: string;
+  email: string;
+  displayName: string | null;
+  photoURL: string | null;
+  createdAt: Timestamp;
 }
 ```
 
-#### `recipes`
-```typescript
-{
-  id: string                     // Auto-generated
-  userId: string                 // Owner UID
-  title: string
-  description?: string
-  categoryId?: string
-  subcategoryId?: string
-  season?: 'primavera' | 'estate' | 'autunno' | 'inverno' | 'tutte_stagioni'  // AI suggested or manual
-  aiSuggested?: boolean          // true se categoria/stagione suggerite da AI
-  difficulty?: 'facile' | 'media' | 'difficile'
-  tags: string[]
-  techniqueIds: string[]         // Phase 2
-  source?: {
-    type: 'manual' | 'url' | 'pdf'
-    url?: string
-    name?: string
-  }
-  ingredients: Ingredient[]      // Array flat con section opzionale
-  steps: Step[]                  // Con sectionOrder per preservare ordine PDF
-  images: string[]               // URLs (Phase 2)
-  servings?: number
-  prepTime?: number              // minuti
-  cookTime?: number              // minuti
-  totalTime?: number             // auto-calcolato
-  notes?: string
-  createdAt: Timestamp
-  updatedAt: Timestamp
-}
+**Security**: Users can only read/update their own profile.
 
-// Step structure
-interface Step {
+---
+
+### recipes/{id}
+
+Complete recipe documents with all data.
+
+```typescript
+interface Recipe {
   id: string;
-  order: number;                 // Ordine globale step (1, 2, 3...)
-  description: string;
-  duration?: number | null;
-  section?: string | null;       // Gruppo step (es. "Per la pasta")
-  sectionOrder?: number;         // Ordine originale sezioni da PDF (preserva ordine)
+  userId: string;              // Owner (required for security)
+  title: string;
+
+  ingredients: Ingredient[];   // Array of ingredient objects
+  steps: Step[];               // Array of step objects
+
+  servings: number;
+  prepTime: number | null;     // Minutes
+  cookTime: number | null;     // Minutes
+  difficulty: string | null;   // "Facile", "Media", "Difficile"
+
+  categoryId: string | null;
+  subcategoryId: string | null;
+  season: Season | null;       // Seasonal classification
+
+  aiSuggested: boolean;        // True if AI-suggested during extraction
+
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
 }
 
-// Ingredient structure
 interface Ingredient {
-  id: string;
+  id: string;                  // UUID v4
   name: string;
   quantity: string;
-  section?: string | null;       // Gruppo ingredienti
+  section: string | null;      // e.g., "Per la pasta", "Per il condimento"
 }
+
+interface Step {
+  id: string;                  // UUID v4
+  description: string;
+  section: string | null;      // e.g., "Preparazione", "Cottura"
+  sectionOrder: number;        // Preserves order from PDF extraction
+}
+
+type Season = 'primavera' | 'estate' | 'autunno' | 'inverno' | 'tutte_stagioni';
 ```
 
-**Note**:
-- `sectionOrder` preserva l'ordine originale delle sezioni dal PDF
-- Le sezioni vengono visualizzate nell'ordine in cui appaiono nel documento originale
-- I campi opzionali usano `null` (non `undefined`) per compatibilità Firebase Firestore
+**Key Features**:
+- `userId` field enforced by security rules
+- `null` for optional fields (not `undefined`)
+- Flat arrays with `section` field (not nested objects)
+- `sectionOrder` preserves original structure from PDF
+- `aiSuggested` flag for transparency
 
-#### `categories`
+**Security**:
+- Read/Write only by owner (`userId == request.auth.uid`)
+- Create requires authenticated user and setting own `userId`
+
+---
+
+### categories/{id}
+
+User-created recipe categories.
+
 ```typescript
-{
-  id: string
-  userId: string
-  name: string
-  icon?: string                  // Emoji
-  color?: string                 // Hex color
-  order: number
-  isDefault: boolean             // true per categorie iniziali
-  createdAt: Timestamp
+interface Category {
+  id: string;
+  userId: string;
+  name: string;
+  emoji: string;               // e.g., "🍝", "🍰"
+  color: string;               // Hex color, e.g., "#FF6B6B"
+  createdAt: Timestamp;
 }
 ```
 
-#### `subcategories`
+**Default Categories**: New users get 10 default Italian categories:
+- Antipasti (🥗), Primi Piatti (🍝), Secondi (🍖), Contorni (🥕)
+- Dolci (🍰), Pane e Pizza (🍞), Salse e Condimenti (🧈)
+- Conserve (🫙), Bevande (🍹), Altro (📋)
+
+**Security**: Owner-only access
+
+---
+
+### subcategories/{id}
+
+Optional subcategories nested under categories.
+
 ```typescript
-{
-  id: string
-  categoryId: string             // Parent category
-  userId: string
-  name: string
-  order: number
-  createdAt: Timestamp
+interface Subcategory {
+  id: string;
+  userId: string;
+  categoryId: string;          // Parent category
+  name: string;
+  createdAt: Timestamp;
 }
 ```
 
-#### `cooking_sessions`
+**Example**:
+- Category: "Primi Piatti"
+- Subcategories: "Pasta", "Risotti", "Zuppe"
+
+**Security**: Owner-only access
+
+---
+
+### cooking_sessions/{id}
+
+Active cooking session with progress tracking.
+
 ```typescript
-{
-  id: string
-  recipeId: string               // ID della ricetta in cottura
-  userId: string
-  checkedIngredients: string[]   // Array di ID ingredienti completati
-  checkedSteps: string[]         // Array di ID step completati
-  startedAt: Timestamp
-  lastUpdatedAt: Timestamp
+interface CookingSession {
+  id: string;
+  userId: string;
+  recipeId: string;
+  recipeTitle: string;
+
+  servings: number;            // Selected serving size (may differ from recipe default)
+
+  checkedIngredients: string[]; // Array of ingredient IDs
+  checkedSteps: string[];       // Array of step IDs
+
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
 }
 ```
 
-#### `techniques` (Phase 2 - Pianificato)
-```typescript
-{
-  id: string
-  userId: string
-  title: string
-  description: string
-  content: string                // Markdown/rich text
-  type?: 'cottura' | 'preparazione' | 'conservazione' | 'altro'
-  tags: string[]
-  relatedRecipeIds: string[]
-  createdAt: Timestamp
-  updatedAt: Timestamp
+**Lifecycle**:
+1. Created when user starts cooking mode
+2. Updated when checkboxes are toggled
+3. **Auto-deleted** when 100% complete (all ingredients + steps checked)
+
+**Security**: Owner-only access
+
+---
+
+### Firestore Security Rules
+
+All collections use owner-based access control:
+
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Recipe collection
+    match /recipes/{recipeId} {
+      allow read, update, delete: if isOwner(resource.data.userId);
+      allow create: if isAuthenticated()
+                    && request.resource.data.userId == request.auth.uid;
+    }
+
+    // Categories, Subcategories, Cooking Sessions: same pattern
+    // ...
+  }
 }
 ```
 
-### Indexes Necessari
+**Deployment**: Rules are deployed from `firebase/firestore.rules` via Firebase CLI
 
-Definiti in `firebase/firestore.indexes.json`:
+---
+
+## API Reference
+
+Server-side API endpoints for AI functionality.
+
+### POST /api/extract-recipes
+
+Extract recipes from PDF using Claude AI.
+
+**Endpoint**: `POST /api/extract-recipes`
+
+**Content-Type**: `multipart/form-data`
+
+**Request**:
+```http
+POST /api/extract-recipes
+Content-Type: multipart/form-data
+
+Body:
+  file: File (PDF, max 4.4MB)
+```
+
+**Response** (Success):
 ```json
 {
-  "indexes": [
-    {
-      "collectionGroup": "recipes",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "userId", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "categories",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "userId", "order": "ASCENDING" },
-        { "fieldPath": "order", "order": "ASCENDING" }
-      ]
-    }
+  "success": true,
+  "extractedRecipes": "# Pasta al Pomodoro\n\n## Ingredienti\n\n### Per la pasta\n- Pasta: 320g\n...",
+  "metadata": {
+    "pageCount": 5,
+    "fileSize": 2048576
+  }
+}
+```
+
+**Response** (Error):
+```json
+{
+  "success": false,
+  "error": "File too large. Maximum size is 4.4MB."
+}
+```
+
+**Error Codes**:
+- `400`: No file provided
+- `400`: Invalid file type (must be PDF)
+- `413`: File too large (> 4.4MB)
+- `500`: Claude API error
+- `500`: Internal server error
+
+**Implementation Details**:
+- **Model**: Claude Sonnet 4.5 (claude-sonnet-4-5-20241022)
+- **Context Window**: 200,000 tokens
+- **Max Output**: 16,000 tokens
+- **Vision**: Native PDF support (base64 encoding)
+- **Prompt**: Italian-language extraction with detailed instructions
+- **Rate Limiting**: Server-side (via Anthropic API limits)
+
+**Performance**:
+- Small PDF (1-5 recipes, < 1MB): 15-30 seconds
+- Medium PDF (10-20 recipes, 2-3MB): 45-90 seconds
+- Large PDF (20+ recipes, 3-4MB): 90-180 seconds
+
+---
+
+### POST /api/suggest-category
+
+AI suggests category and season for a recipe.
+
+**Endpoint**: `POST /api/suggest-category`
+
+**Content-Type**: `application/json`
+
+**Request**:
+```json
+{
+  "recipeTitle": "Risotto ai Funghi Porcini",
+  "ingredients": [
+    { "name": "funghi porcini", "quantity": "300g" },
+    { "name": "riso carnaroli", "quantity": "320g" },
+    { "name": "brodo vegetale", "quantity": "1l" }
+  ],
+  "userCategories": [
+    { "id": "cat1", "name": "Primi Piatti" },
+    { "id": "cat2", "name": "Secondi" }
   ]
 }
 ```
 
-Deploy indexes:
-```bash
-firebase deploy --only firestore:indexes
-```
-
----
-
-## 🔒 Sicurezza
-
-### Firebase Security Rules
-
-Principio: **Ogni utente vede solo i propri dati**
-
-```javascript
-// firebase/firestore.rules
-function isOwner(userId) {
-  return request.auth != null && request.auth.uid == userId;
-}
-
-match /recipes/{recipeId} {
-  allow read: if isOwner(resource.data.userId);
-  allow create: if isAuthenticated()
-                && request.resource.data.userId == request.auth.uid;
-  allow update, delete: if isOwner(resource.data.userId);
+**Response**:
+```json
+{
+  "success": true,
+  "suggestion": {
+    "categoryName": "Primi Piatti",
+    "season": "autunno",
+    "isNewCategory": false
+  }
 }
 ```
 
-### Best Practices
+**Season Values**:
+- `primavera` (Spring)
+- `estate` (Summer)
+- `autunno` (Autumn)
+- `inverno` (Winter)
+- `tutte_stagioni` (All seasons)
 
-1. **Environment Variables**:
-   - Mai committare `.env.local`
-   - Usa secrets manager in produzione (Vercel/Firebase)
+**Logic**:
+1. **Category Suggestion**:
+   - Analyzes recipe title and ingredients
+   - Matches against user's existing categories
+   - If no match, proposes new category name
+   - Sets `isNewCategory: true` if proposing new category
 
-2. **Firebase API Key**:
-   - ✅ Sicuro esporlo in client (è rate-limited)
-   - ⚠️ Configura Firebase restrictions nel console:
-     - HTTP referrers (per web)
-     - IP restrictions (opzionale)
+2. **Season Detection**:
+   - Analyzes ingredients against Italian seasonal database
+   - Returns most common season among recognized ingredients
+   - Defaults to `tutte_stagioni` if ambiguous or no seasonal ingredients found
 
-3. **Authentication**:
-   - Session cookie gestiti da Firebase Auth
-   - Automatic token refresh
-   - Protected routes via `ProtectedRoute` component
-
-4. **Firestore**:
-   - Sempre validare `userId` nelle queries
-   - Rules applicano ownership a livello server
-   - Timestamps via `serverTimestamp()` (non modificabili da client)
+**Example Seasonal Ingredients**:
+- **Primavera**: asparagi, carciofi, fave, piselli, fragole
+- **Estate**: pomodori, melanzane, zucchine, basilico, pesche
+- **Autunno**: zucca, funghi, castagne, radicchio, uva
+- **Inverno**: cavolo nero, agrumi, cime di rapa, finocchi
 
 ---
 
-## 🐛 Troubleshooting
+## Contributing
 
-### Problemi Comuni
+We welcome contributions from the community! Here's how to get started.
 
-#### 1. "Firebase Auth not initialized"
-```bash
-# Verifica .env.local
-cat .env.local
+### How to Contribute
 
-# Deve contenere tutte le variabili NEXT_PUBLIC_FIREBASE_*
-# Riavvia dev server dopo modifica .env
-npm run dev
+1. **Fork the Repository**
+   - Click "Fork" on GitHub
+   - Clone your fork: `git clone https://github.com/YOUR_USERNAME/il-mio-ricettario.git`
+
+2. **Create a Feature Branch**
+   ```bash
+   git checkout -b feature/amazing-feature
+   ```
+
+3. **Read the Documentation**
+   - [CLAUDE.md](CLAUDE.md) - Project overview and AI guidelines
+   - [AGENTS.md](AGENTS.md) - Common gotchas and patterns (30min+ debug issues)
+   - [COMMENTS.md](COMMENTS.md) - Code commenting guidelines
+
+4. **Make Your Changes**
+   - Write clean, well-documented code
+   - Follow the coding conventions (see [Development](#development))
+   - Add tests for new features
+
+5. **Commit Your Changes**
+   ```bash
+   git commit -m 'Add amazing feature'
+   ```
+   - Use clear, descriptive commit messages
+   - Explain what and why, not how
+
+6. **Push to Your Fork**
+   ```bash
+   git push origin feature/amazing-feature
+   ```
+
+7. **Open a Pull Request**
+   - Go to the original repository
+   - Click "New Pull Request"
+   - Describe your changes clearly
+   - Reference any related issues
+
+### Code Review Checklist
+
+Before submitting, ensure:
+
+- [ ] **TypeScript**: Strict mode passes without errors (`npx tsc --noEmit`)
+- [ ] **Linting**: ESLint passes (`npm run lint`)
+- [ ] **Tests**: All tests pass (`npm test`)
+- [ ] **Build**: Production build succeeds (`npm run build`)
+- [ ] **Firestore Rules**: Updated if new collections added
+- [ ] **Documentation**: Updated if new features added
+- [ ] **Clean Code**: No `console.log`, commented-out code, or debug statements
+
+### Coding Standards
+
+**Naming Conventions**:
+- **Components**: PascalCase (e.g., `RecipeCard.tsx`)
+- **Functions**: camelCase (e.g., `getRecipes`)
+- **Constants**: UPPER_SNAKE_CASE (e.g., `MAX_FILE_SIZE`)
+- **Routes**: kebab-case (e.g., `/estrattore-ricette`)
+
+**File Organization**:
+- Components in `src/components/`
+- Hooks in `src/lib/hooks/`
+- Utils in `src/lib/utils/`
+- Types in `src/types/`
+
+**TypeScript**:
+- Prefer `interface` for domain models
+- Prefer `type` for utility types
+- No `any` types—use `unknown` and type guards
+- Export types for public APIs
+
+**Styling**:
+- Tailwind utilities only
+- Use semantic color tokens (`bg-primary`, not `bg-blue-600`)
+- Mobile-first responsive design
+- Use `cn()` utility for conditional classes
+
+**Firebase**:
+- Use `null` for optional fields, never `undefined`
+- Always filter queries by `userId`
+- Use `serverTimestamp()` for timestamps
+
+### Good First Issues
+
+Looking for where to start? Try these:
+
+- **Add Unit Tests**: Cover utility functions in `src/lib/utils/`
+- **Improve Error Messages**: Make error toasts more user-friendly
+- **Add i18n Support**: Implement English localization
+- **Mobile UI Enhancements**: Improve animations and transitions
+- **Documentation**: Fix typos, improve examples, add missing sections
+- **Accessibility**: Add ARIA labels, improve keyboard navigation
+- **Performance**: Optimize re-renders, add loading states
+
+### Areas Needing Contributions
+
+- **Test Coverage**: Currently limited—need more unit and integration tests
+- **E2E Tests**: Implement Playwright or Cypress tests
+- **Accessibility**: WCAG 2.1 Level AA compliance
+- **Performance**: Bundle size optimization, code splitting
+- **Features**: See project issues for feature requests
+
+### Questions?
+
+- **Documentation**: Check [CLAUDE.md](CLAUDE.md), [AGENTS.md](AGENTS.md), [COMMENTS.md](COMMENTS.md)
+- **Bug Reports**: Open an issue on [GitHub Issues](https://github.com/GiuseppeDM98/il-mio-ricettario/issues)
+- **Discussions**: Use [GitHub Discussions](https://github.com/GiuseppeDM98/il-mio-ricettario/discussions) for questions
+
+---
+
+## Troubleshooting
+
+Common issues and solutions.
+
+### Firebase Auth Not Initialized
+
+**Symptom**:
+```
+Error: Firebase Auth not initialized
 ```
 
-#### 2. "Permission denied" in Firestore
-```bash
-# Verifica che security rules siano deployate
-firebase deploy --only firestore:rules
+**Cause**: Missing or incorrect Firebase environment variables
 
-# Verifica che userId sia corretto nelle queries
-# Tutte le queries devono filtrare per userId
+**Solution**:
+1. Check `.env.local` file exists in project root
+2. Verify all 6 `NEXT_PUBLIC_FIREBASE_*` variables are set
+3. Ensure no typos in variable names
+4. Restart development server: `npm run dev`
+
+---
+
+### Permission Denied in Firestore
+
+**Symptom**:
+```
+FirebaseError: Missing or insufficient permissions
 ```
 
-#### 3. "Module not found: @/..."
-```bash
-# Verifica tsconfig.json paths
-cat tsconfig.json | grep "@"
+**Cause**: Security rules not deployed or queries don't filter by `userId`
 
-# Dovrebbe mostrare:
-# "@/*": ["./src/*"]
+**Solution**:
+1. Deploy security rules:
+   ```bash
+   firebase deploy --only firestore:rules
+   ```
+2. Verify rules in Firebase Console → Firestore → Rules tab
+3. Check that queries filter by user:
+   ```typescript
+   query(recipesRef, where('userId', '==', userId))
+   ```
 
-# Riavvia TypeScript server in VS Code
-# Cmd+Shift+P → "TypeScript: Restart TS Server"
+---
+
+### PDF Extraction Fails
+
+**Symptom**:
+- "API key not configured"
+- "File too large"
+- Extraction times out
+
+**Solutions**:
+
+**For API key errors**:
+1. Verify `ANTHROPIC_API_KEY` in `.env.local`
+2. Ensure it does NOT have `NEXT_PUBLIC_` prefix
+3. Check API key is active in Anthropic Console
+4. Verify account has available credits
+
+**For file size errors**:
+1. Check PDF size: must be < 4.4MB (Vercel limit)
+2. Compress PDF using:
+   - [iLovePDF](https://www.ilovepdf.com/compress_pdf)
+   - [Adobe Compress PDF](https://www.adobe.com/acrobat/online/compress-pdf.html)
+3. Try splitting multi-page PDFs
+
+**For timeouts**:
+1. Try smaller PDF first (1-2 pages)
+2. Check Vercel function logs for errors
+3. Increase function timeout (Vercel Pro only)
+
+---
+
+### Mobile Navigation Issues
+
+**Symptom**:
+- Bottom nav shows on desktop
+- Sidebar visible on mobile
+- Navigation breaks on rotation
+
+**Solutions**:
+1. Check Tailwind config has custom 1440px breakpoint:
+   ```javascript
+   lg: '1440px'
+   ```
+2. Use `max-lg:portrait:` not just `portrait:`:
+   ```typescript
+   className="max-lg:portrait:block lg:hidden"
+   ```
+3. Clear browser cache and hard reload
+4. Test in incognito mode
+5. Check browser console for CSS errors
+
+---
+
+### TypeScript Build Errors
+
+**Symptom**:
+```
+Type error: Property 'X' does not exist on type 'Y'
 ```
 
-#### 4. Build fallisce con TypeScript errors
-```bash
-# Check errors
-npx tsc --noEmit
+**Solutions**:
+1. Run TypeScript compiler:
+   ```bash
+   npx tsc --noEmit
+   ```
+2. Check type definitions in `src/types/index.ts`
+3. Update `@types` packages:
+   ```bash
+   npm install --save-dev @types/node@latest @types/react@latest
+   ```
+4. Restart VS Code/IDE for IntelliSense refresh
 
-# Common fix: update types
-npm install --save-dev @types/node@latest @types/react@latest
+---
 
-# Verifica strict mode in tsconfig.json
+### Module Not Found Errors
+
+**Symptom**:
+```
+Module not found: Can't resolve '@/lib/...'
 ```
 
-#### 5. Tailwind classes non applicate
-```bash
-# Verifica tailwind.config.ts content paths
-# Deve includere tutti i file .tsx
+**Solutions**:
+1. Verify `tsconfig.json` has correct paths:
+   ```json
+   {
+     "compilerOptions": {
+       "paths": {
+         "@/*": ["./src/*"]
+       }
+     }
+   }
+   ```
+2. Restart development server
+3. Delete `.next` folder and rebuild:
+   ```bash
+   rm -rf .next
+   npm run dev
+   ```
 
-# Force rebuild
-rm -rf .next
-npm run dev
-```
+---
 
-#### 6. "Invalid hook call" in test
+### Debug Tools
+
+**Enable Firebase Logging** (development only):
 ```typescript
-// Mock sempre i context/hooks usati nel component
-jest.mock('@/lib/hooks/useAuth', () => ({
-  useAuth: () => ({ user: mockUser, loading: false })
-}))
+import { setLogLevel } from 'firebase/firestore';
 
-// Oppure wrappa component con provider
-render(
-  <AuthProvider>
-    <ComponentUnderTest />
-  </AuthProvider>
-)
+if (process.env.NODE_ENV === 'development') {
+  setLogLevel('debug');
+}
 ```
 
-#### 7. Estrattore AI non funziona / "API key not configured"
+**Next.js Verbose Logging**:
 ```bash
-# Verifica che ANTHROPIC_API_KEY sia in .env.local
-cat .env.local | grep ANTHROPIC
-
-# Deve mostrare:
-# ANTHROPIC_API_KEY=sk-ant-api03-...
-
-# Verifica che NON abbia il prefisso NEXT_PUBLIC_
-# ❌ WRONG: NEXT_PUBLIC_ANTHROPIC_API_KEY
-# ✅ CORRECT: ANTHROPIC_API_KEY
-
-# Riavvia il server dopo aver aggiunto la chiave
-npm run dev
+DEBUG=* npm run dev
 ```
 
-#### 8. PDF troppo grande o estrazione fallita
-```bash
-# Limiti attuali:
-# - Max dimensione file: 4.4MB (limite Vercel body size)
-# - Formato supportato: PDF con testo selezionabile
-# - PDF scansionati (solo immagini) potrebbero non funzionare bene
-
-# Se il PDF supera 4.4MB:
-# 1. Usa servizi di compressione gratuiti:
-#    - iLovePDF: https://www.ilovepdf.com/it/comprimere_pdf (consigliato)
-#    - Adobe Acrobat Online
-#    - Smallpdf
-# 2. La compressione solitamente riduce del 30-60% senza perdita qualità
-# 3. Riprova il caricamento dopo la compressione
-
-# Per PDF scansionati, considera di:
-# 1. Usare OCR esterno prima
-# 2. Convertire in PDF con testo
-# 3. Estrarre manualmente
-```
-
-### Log e Debug
-
-```typescript
-// Enable Firebase debug logs
-import { setLogLevel } from 'firebase/firestore'
-setLogLevel('debug')
-
-// React dev tools
-// Installa extension: React Developer Tools
-
-// Network tab
-// Ispeziona chiamate Firestore in browser DevTools → Network
-// Filtra per "firestore.googleapis.com"
-```
+**Chrome DevTools**:
+- Network tab → Filter for `firebaseio.com` or `anthropic.com`
+- React DevTools → Inspect component state
+- Performance tab → Check for unnecessary re-renders
 
 ---
 
-## 📚 Risorse
+## License
 
-### Documentazione
-- [Next.js Docs](https://nextjs.org/docs)
-- [Firebase Docs](https://firebase.google.com/docs)
-- [Tailwind CSS Docs](https://tailwindcss.com/docs)
-- [TypeScript Handbook](https://www.typescriptlang.org/docs/)
+This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**.
 
-### Design Documents (cartella `/docs`)
-- **[DD1 - Foundation & MVP](docs/DD1-foundation-mvp.md)** - Setup base e funzionalità core
-- **[DD2 - Advanced Features](docs/DD2-advanced-features.md)** - Categorie, ricerca, tecniche
-- **[DD3 - AI Magic](docs/DD3-ai-magic.md)** - Import PDF e funzionalità AI
+### What This Means
 
-### AI Coding Guidelines
-- **[AGENTS.md](AGENTS.md)** - Linee guida per AI agents, convenzioni, pattern
+**You Are Free To**:
+- ✅ Use the software for any purpose (personal, commercial, educational)
+- ✅ Study and modify the source code
+- ✅ Distribute copies of the software
+- ✅ Distribute modified versions
 
----
+**Under These Conditions**:
+- ⚠️ **Disclose Source**: If you distribute the software, you must make the source code available
+- ⚠️ **Same License**: Modifications must be licensed under AGPL-3.0
+- ⚠️ **State Changes**: Document significant modifications
+- ⚠️ **Network Use = Distribution**: If you host this app publicly, you must provide source access to users
 
-## 📝 Licenza
+**Important**: The AGPL-3.0 includes a "network use" clause. If you modify this software and run it as a web service (SaaS), you must make your modified source code available to users of that service. This ensures that improvements to the software remain open and accessible to the community.
 
-Questo progetto è rilasciato sotto licenza MIT.
+See [LICENSE.md](LICENSE.md) for the full license text.
 
-```
-Copyright (c) 2025 Giuseppe Di Maio
+### Why AGPL-3.0?
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+We chose AGPL-3.0 to ensure that this project and any improvements made to it remain open source forever, even when deployed as a web service. This aligns with the values of sharing and community that are central to cooking and recipe exchange.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+### Third-Party Licenses
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
+This project uses open-source libraries with the following licenses:
+
+- **Next.js, React**: MIT License
+- **Firebase SDK**: Apache License 2.0
+- **Anthropic SDK**: MIT License
+- **Tailwind CSS**: MIT License
+- **Radix UI**: MIT License
+- **Lucide React**: ISC License
+
+See `package.json` for the complete list of dependencies and their licenses.
 
 ---
 
-## 🗺️ Roadmap
+## Support
 
-### Q1 2025 - Phase 1: MVP ✅
-- [x] Project setup & Firebase config
-- [x] Authentication (Email + Google OAuth)
-- [x] Recipe CRUD completo
-- [x] Categories system con sottocategorie
-- [x] Mobile-responsive UI
-- [x] Cooking mode avanzato con tracking progresso
-- [x] Sistema cotture in corso (sessioni salvate)
-- [x] **Estrattore AI ricette da PDF** (Claude 4.5)
-- [x] Parser intelligente markdown → ricette strutturate
-- [x] **Auto-categorizzazione AI con creazione automatica categorie**
-- [x] **Classificazione stagionale basata su ingredienti italiani**
-- [x] **Filtri stagione con conteggio ricette**
-- [ ] Deploy su Firebase Hosting/Vercel
+### Documentation
 
-### Q2 2025 - Phase 2: Advanced Features
-- [ ] Advanced search & filters
-  - [ ] Full-text search (Algolia o Firestore search)
-  - [ ] Multi-filter UI (categoria, difficoltà, tempo)
-- [ ] URL import
-  - [ ] Parser per GialloZafferano
-  - [ ] Parser generico con OpenGraph/schema.org
-- [ ] Technique notes system
-  - [ ] CRUD tecniche
-  - [ ] Rich text editor (TipTap/Slate)
-  - [ ] Link tecniche → ricette
-- [ ] Tags system
-  - [ ] Tag autocomplete
-  - [ ] Tag cloud visualization
+- **README.md** - This file (comprehensive project overview)
+- **[SETUP.md](SETUP.md)** - Production deployment guide
+- **[CLAUDE.md](CLAUDE.md)** - Developer reference for AI agents
+- **[AGENTS.md](AGENTS.md)** - Common gotchas and patterns
+- **[COMMENTS.md](COMMENTS.md)** - Code commenting guidelines
 
-### Q3 2025 - Phase 3: AI Magic Avanzato
-- [ ] Miglioramenti estrattore AI
-  - [ ] Suggerimenti difficoltà basati su analisi AI
-  - [ ] Estrazione da immagini ricette (OCR)
-  - [ ] Miglioramento accuratezza categorizzazione
-- [ ] Recipe enhancement AI
-  - [ ] Suggerimenti tempi ottimali
-  - [ ] Correzione/normalizzazione ingredienti
-  - [ ] Traduzione ricette
-- [ ] Smart features
-  - [ ] Suggerimenti ricette simili
-  - [ ] Meal planning AI
-  - [ ] Generazione varianti ricette
+### Getting Help
 
-### Future Ideas
-- [ ] Social features
-  - [ ] Condivisione ricette pubbliche
-  - [ ] Following/followers
-  - [ ] Community recipe feed
-- [ ] Meal planning & shopping lists
-- [ ] Nutrition information (API integration)
-- [ ] Recipe collections/boards
-- [ ] Native mobile app (React Native/Flutter)
-- [ ] Voice commands per cooking mode
-- [ ] Print-friendly recipe format
-- [ ] Recipe scaling (porzioni dinamiche)
+**Bug Reports**:
+
+Found a bug? Open an issue on [GitHub Issues](https://github.com/GiuseppeDM98/il-mio-ricettario/issues) with:
+- Clear description of the problem
+- Steps to reproduce
+- Expected behavior vs actual behavior
+- Screenshots (if applicable)
+- Environment details (browser, OS, app version)
+
+**Feature Requests**:
+
+Have an idea? Open a feature request on [GitHub Issues](https://github.com/GiuseppeDM98/il-mio-ricettario/issues) with the "enhancement" label:
+- Describe the use case
+- Explain the problem it solves
+- Propose a solution (optional)
+- Indicate willingness to contribute
+
+**Discussions**:
+
+For questions, ideas, or general discussion, use [GitHub Discussions](https://github.com/GiuseppeDM98/il-mio-ricettario/discussions).
+
+### Author & Maintainer
+
+**Giuseppe Di Maio**
+[@GiuseppeDM98](https://github.com/GiuseppeDM98)
+
+### Acknowledgments
+
+- **Firebase Team** - For backend-as-a-service platform
+- **Next.js Team** - For the incredible React framework
+- **Anthropic** - For Claude AI and excellent developer experience
+- **Open Source Community** - For countless libraries that make this possible
+- **You** - For using, contributing to, and improving this project
 
 ---
 
-## 💬 Supporto
+Made with TypeScript and passion for good food.
 
-### Hai trovato un bug?
-Apri una [Issue su GitHub](https://github.com/GiuseppeDM98/il-mio-ricettario/issues) con:
-- Descrizione del problema
-- Steps per riprodurlo
-- Expected vs actual behavior
-- Screenshot se applicabile
-- Environment (browser, OS, versione app)
-
-### Hai domande?
-- Consulta la [Documentazione](docs/)
-- Leggi [AGENTS.md](AGENTS.md) per convenzioni di codice
-- Controlla [Troubleshooting](#-troubleshooting)
-
-### Vuoi contribuire?
-Leggi la sezione [Contribuire](#-contribuire)
-
----
-
-## 🙏 Acknowledgments
-
-- Design inspirato da app moderne per recipe management
-- UI components basati su [shadcn/ui](https://ui.shadcn.com/)
-- Firebase team per l'ottimo backend-as-a-service
-- Next.js team per il fantastico framework
-
----
-
-<div align="center">
-
-**Fatto con ❤️ e TypeScript**
-
-[⬆ Torna su](#-il-mio-ricettario)
-
-</div>
+[⬆ Back to Top](#il-mio-ricettario)

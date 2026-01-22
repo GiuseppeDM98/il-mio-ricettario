@@ -7,9 +7,10 @@ import { Upload, FileText, X } from 'lucide-react';
 interface RecipeExtractorUploadProps {
   onFileSelected: (file: File) => void;
   isLoading?: boolean;
+  disabled?: boolean;
 }
 
-export function RecipeExtractorUpload({ onFileSelected, isLoading }: RecipeExtractorUploadProps) {
+export function RecipeExtractorUpload({ onFileSelected, isLoading, disabled }: RecipeExtractorUploadProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -85,7 +86,7 @@ export function RecipeExtractorUpload({ onFileSelected, isLoading }: RecipeExtra
           dragActive
             ? 'border-primary bg-primary/5'
             : 'border-gray-300 hover:border-gray-400'
-        } ${isLoading ? 'opacity-50 pointer-events-none' : ''}`}
+        } ${isLoading || disabled ? 'opacity-50 pointer-events-none' : ''}`}
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
         onDragOver={handleDrag}
@@ -97,7 +98,7 @@ export function RecipeExtractorUpload({ onFileSelected, isLoading }: RecipeExtra
           accept=".pdf,application/pdf"
           onChange={handleChange}
           className="hidden"
-          disabled={isLoading}
+          disabled={isLoading || disabled}
         />
 
         {!selectedFile ? (
@@ -117,7 +118,7 @@ export function RecipeExtractorUpload({ onFileSelected, isLoading }: RecipeExtra
               type="button"
               variant="outline"
               onClick={() => fileInputRef.current?.click()}
-              disabled={isLoading}
+              disabled={isLoading || disabled}
             >
               Seleziona PDF
             </Button>
@@ -143,7 +144,7 @@ export function RecipeExtractorUpload({ onFileSelected, isLoading }: RecipeExtra
               variant="ghost"
               size="sm"
               onClick={handleRemoveFile}
-              disabled={isLoading}
+              disabled={isLoading || disabled}
             >
               <X className="w-4 h-4" />
             </Button>
@@ -156,7 +157,7 @@ export function RecipeExtractorUpload({ onFileSelected, isLoading }: RecipeExtra
         <Button
           type="button"
           onClick={handleUpload}
-          disabled={isLoading}
+          disabled={isLoading || disabled}
           className="w-full"
           size="lg"
         >

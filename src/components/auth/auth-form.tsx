@@ -9,9 +9,10 @@ import { GoogleIcon } from '@/components/ui/google-icon';
 
 interface AuthFormProps {
   mode: 'login' | 'register';
+  showGoogleButton?: boolean;
 }
 
-export function AuthForm({ mode }: AuthFormProps) {
+export function AuthForm({ mode, showGoogleButton = true }: AuthFormProps) {
   const router = useRouter();
   const { signIn, signUp, signInWithGoogle } = useAuth();
 
@@ -91,25 +92,29 @@ export function AuthForm({ mode }: AuthFormProps) {
         </Button>
       </form>
 
-      <div className="relative">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-gray-300" />
-        </div>
-        <div className="relative flex justify-center text-sm">
-          <span className="bg-white px-2 text-gray-500">oppure</span>
-        </div>
-      </div>
+      {showGoogleButton && (
+        <>
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="bg-white px-2 text-gray-500">oppure</span>
+            </div>
+          </div>
 
-      <Button
-        type="button"
-        variant="outline"
-        className="w-full"
-        onClick={handleGoogleSignIn}
-        disabled={loading}
-      >
-        <GoogleIcon />
-        Continua con Google
-      </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={handleGoogleSignIn}
+            disabled={loading}
+          >
+            <GoogleIcon />
+            Continua con Google
+          </Button>
+        </>
+      )}
     </div>
   );
 }
