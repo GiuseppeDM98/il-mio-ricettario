@@ -4,7 +4,6 @@
 
 Designed for home cooks who want to digitize their recipe collections without compromising on simplicity and speed.
 
-![Version](https://img.shields.io/badge/version-0.1.0-blue)
 ![License](https://img.shields.io/badge/license-AGPL--3.0-blue)
 ![Next.js](https://img.shields.io/badge/Next.js-14.2-black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue)
@@ -61,7 +60,8 @@ This project deliberately avoids image-heavy interfaces common in recipe apps. I
 - **Smart Categorization**: Organize recipes with customizable categories and subcategories, each with emoji and color
 - **Advanced Filtering**: Filter recipes by category, subcategory, and season simultaneously with live count updates
 
-**[Screenshot: Recipe list with category and season filters]**
+<img width="1884" height="777" alt="image" src="https://github.com/user-attachments/assets/fa9cc1bd-f032-408a-9233-a1dd9e700dd8" />
+
 
 ### Secure Authentication
 
@@ -72,7 +72,8 @@ This project deliberately avoids image-heavy interfaces common in recipe apps. I
 
 ### Cooking Mode
 
-**[Screenshot: Cooking mode interface with checkboxes and progress tracking]**
+<img width="1617" height="883" alt="image" src="https://github.com/user-attachments/assets/19cace0e-cd22-4723-8252-94525cd3c205" />
+
 
 - **Screen Wake Lock**: Uses nosleep.js to prevent your device from going to sleep while cooking
 - **Interactive Checkboxes**: Check off ingredients and steps as you complete them
@@ -91,7 +92,8 @@ This project deliberately avoids image-heavy interfaces common in recipe apps. I
 
 ### AI-Powered PDF Extraction
 
-**[Screenshot: PDF extraction preview with AI-suggested categories]**
+<img width="1162" height="761" alt="image" src="https://github.com/user-attachments/assets/ada5b7e2-a646-49c9-a8d2-b4ef5d8e7457" />
+
 
 The standout feature that sets Il Mio Ricettario apart:
 
@@ -120,7 +122,10 @@ The standout feature that sets Il Mio Ricettario apart:
 
 ### Mobile-First Responsive Design
 
-**[Screenshot: Mobile navigation in portrait vs landscape orientation]**
+<img width="373" height="829" alt="image" src="https://github.com/user-attachments/assets/0b0bd5b9-97dd-49be-b784-1cc0b0c81eb4" />
+<img width="918" height="415" alt="image" src="https://github.com/user-attachments/assets/596c4e03-4001-47cd-a566-04768c7b4f8b" />
+
+
 
 - **Orientation-Aware Navigation**:
   - **Desktop (≥ 1440px)**: Persistent sidebar navigation always visible
