@@ -1,5 +1,5 @@
 # Production Deployment Guide
-
+.
 Complete guide for deploying **Il Mio Ricettario** to production using Vercel or Firebase Hosting.
 
 ---
