@@ -54,7 +54,25 @@ export function RecipeForm({ recipe, mode }: RecipeFormProps) {
   const [steps, setSteps] = useState<Step[]>(recipe?.steps || []);
   const [categoryId, setCategoryId] = useState(recipe?.categoryId || '');
   const [subcategoryId, setSubcategoryId] = useState(recipe?.subcategoryId || '');
-  const [season, setSeason] = useState<Season | undefined>(recipe?.season);
+
+  /**
+   * Lazy migration from single 'season' to 'seasons' array.
+   *
+   * When editing old recipe:
+   * - If recipe has 'seasons' (new format) → use as-is
+   * - If recipe has 'season' (old format) → convert to [season]
+   * - Otherwise → empty array
+   *
+   * WHY LAZY MIGRATION:
+   * Avoids need for bulk migration script. Data migrates organically as users
+   * edit recipes. Zero deployment risk. Old and new code coexist safely.
+   */
+  const [seasons, setSeasons] = useState<Season[]>(() => {
+    if (recipe?.seasons) return recipe.seasons; // New format
+    if (recipe?.season) return [recipe.season]; // Old format → migrate
+    return []; // New recipe
+  });
+
   const [loading, setLoading] = useState(false);
 
   // ========================================
@@ -262,7 +280,7 @@ export function RecipeForm({ recipe, mode }: RecipeFormProps) {
         steps,
         categoryId: categoryId || '',
         subcategoryId: subcategoryId || '',
-        season: season,
+        seasons: seasons.length > 0 ? seasons : undefined, // Optional field
         aiSuggested: recipe?.aiSuggested,
         difficulty: recipe?.difficulty || 'facile',
         tags: recipe?.tags || [],
@@ -318,8 +336,8 @@ export function RecipeForm({ recipe, mode }: RecipeFormProps) {
       />
 
       <SeasonSelector
-        selectedSeason={season}
-        onSeasonChange={setSeason}
+        selectedSeasons={seasons}
+        onSeasonsChange={setSeasons}
         aiSuggested={recipe?.aiSuggested}
       />
 

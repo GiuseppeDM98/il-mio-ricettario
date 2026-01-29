@@ -5,10 +5,14 @@ import { useRecipes } from '@/lib/hooks/useRecipes';
 import { RecipeCard } from '@/components/recipe/recipe-card';
 import { Spinner } from '@/components/ui/spinner';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useAuth } from '@/lib/context/auth-context';
 import { getUserCategories, getCategorySubcategories } from '@/lib/firebase/categories';
 import { Category, Subcategory, Season } from '@/types';
+import { matchesSearch } from '@/lib/utils/search';
+import { SEASON_ICONS, SEASON_LABELS, ALL_SEASONS } from '@/lib/constants/seasons';
 import Link from 'next/link';
+import { Search } from 'lucide-react';
 
 /**
  * Recipe List Page - Cascading Filter Architecture
@@ -27,22 +31,6 @@ import Link from 'next/link';
  * (trade-off: slightly slower initial load for better UX).
  */
 
-const SEASON_ICONS: Record<Season, string> = {
-  primavera: '🌸',
-  estate: '☀️',
-  autunno: '🍂',
-  inverno: '❄️',
-  tutte_stagioni: '🌍'
-};
-
-const SEASON_LABELS: Record<Season, string> = {
-  primavera: 'Primavera',
-  estate: 'Estate',
-  autunno: 'Autunno',
-  inverno: 'Inverno',
-  tutte_stagioni: 'Tutte le stagioni'
-};
-
 /**
  * Recipe list with three-level filtering (season, category, subcategory).
  *
@@ -58,6 +46,7 @@ export default function RecipesPage() {
   const [selectedSeason, setSelectedSeason] = useState<Season | 'all'>('all');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('all');
   const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Load ALL subcategories upfront (not lazy) because:
   // - Filter UI needs complete subcategory list for all categories
@@ -87,22 +76,44 @@ export default function RecipesPage() {
   }, [user]);
 
   /**
-   * Applies cascading filters in order (season → category → subcategory).
+   * Applies cascading filters in order (search → season → category → subcategory).
+   *
+   * Filter order rationale:
+   * - Search first (narrows entire dataset by title)
+   * - Season/Category/Subcategory refine search results
    *
    * Cascading filter pattern: Each filter depends on previous ones.
-   * Season is independent, category narrows season results,
-   * subcategory narrows category results.
+   * Search is independent, season narrows search results,
+   * category narrows season results, subcategory narrows category results.
    *
-   * This is more efficient than re-filtering from full list each time.
+   * Performance: useMemo prevents recalculation unless dependencies change.
+   * With 1000+ recipes, re-filtering on every keystroke would cause lag.
    *
    * Dependencies: Re-runs only when recipes or filter selections change.
    */
   const filteredRecipes = useMemo(() => {
     let filtered = recipes;
 
-    // Filter by season
+    // Filter by search query (title only)
+    if (searchQuery.trim()) {
+      filtered = filtered.filter(recipe =>
+        matchesSearch(searchQuery, recipe.title)
+      );
+    }
+
+    // Filter by season (supports both old 'season' and new 'seasons' fields)
     if (selectedSeason !== 'all') {
-      filtered = filtered.filter(recipe => recipe.season === selectedSeason);
+      filtered = filtered.filter(recipe => {
+        // New format: check if season in array
+        if (recipe.seasons) {
+          return recipe.seasons.includes(selectedSeason);
+        }
+        // Old format: exact match (backward compatibility for unmigrated recipes)
+        if (recipe.season) {
+          return recipe.season === selectedSeason;
+        }
+        return false;
+      });
     }
 
     // Filter by category
@@ -116,7 +127,7 @@ export default function RecipesPage() {
     }
 
     return filtered;
-  }, [recipes, selectedSeason, selectedCategoryId, selectedSubcategoryId]);
+  }, [recipes, searchQuery, selectedSeason, selectedCategoryId, selectedSubcategoryId]);
 
   /**
    * Dynamically filters subcategories based on selected category.
@@ -169,6 +180,38 @@ export default function RecipesPage() {
         <Button asChild>
           <Link href="/ricette/new">Crea Ricetta</Link>
         </Button>
+      </div>
+
+      {/* === SEARCH BAR === */}
+      <div className="mb-6">
+        <label htmlFor="search-recipes" className="block text-sm font-medium text-gray-700 mb-2">
+          Cerca ricette
+        </label>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <Input
+            id="search-recipes"
+            type="text"
+            placeholder="Cerca per nome ricetta..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 w-full"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xl"
+              aria-label="Cancella ricerca"
+            >
+              ×
+            </button>
+          )}
+        </div>
+        {searchQuery && (
+          <p className="text-sm text-gray-500 mt-2">
+            {filteredRecipes.length} {filteredRecipes.length === 1 ? 'ricetta trovata' : 'ricette trovate'} per &quot;{searchQuery}&quot;
+          </p>
+        )}
       </div>
 
       {/* === CATEGORY/SUBCATEGORY FILTERS === */}
@@ -241,8 +284,11 @@ export default function RecipesPage() {
           >
             Tutte ({recipes.length})
           </button>
-          {(Object.keys(SEASON_ICONS) as Season[]).map((season) => {
-            const count = recipes.filter(r => r.season === season).length;
+          {ALL_SEASONS.map((season) => {
+            // Count recipes with this season (handle both old and new fields)
+            const count = recipes.filter(r =>
+              r.seasons?.includes(season) || r.season === season
+            ).length;
             return (
               <button
                 key={season}
@@ -272,8 +318,21 @@ export default function RecipesPage() {
         </div>
       ) : filteredRecipes.length === 0 ? (
         <div className="text-center py-12 border-2 border-dashed rounded-lg">
-          <h3 className="text-xl font-semibold">Nessuna ricetta trovata per questa stagione</h3>
-          <p className="text-gray-500 mt-2">Prova a selezionare un'altra stagione o crea una nuova ricetta.</p>
+          <h3 className="text-xl font-semibold">Nessuna ricetta trovata</h3>
+          <p className="text-gray-500 mt-2">
+            {searchQuery
+              ? `Nessun risultato per "${searchQuery}". Prova con termini diversi.`
+              : 'Prova a selezionare filtri diversi o crea una nuova ricetta.'}
+          </p>
+          {searchQuery && (
+            <Button
+              onClick={() => setSearchQuery('')}
+              variant="outline"
+              className="mt-4"
+            >
+              Cancella ricerca
+            </Button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

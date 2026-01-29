@@ -58,6 +58,8 @@ This project deliberately avoids image-heavy interfaces common in recipe apps. I
 - **Sectioned Organization**: Organize ingredients and steps into sections (e.g., "For the dough", "For the filling")
 - **Rich Metadata**: Track servings, prep time, cook time, difficulty level, and seasonal availability
 - **Smart Categorization**: Organize recipes with customizable categories and subcategories, each with emoji and color
+- **Recipe Search**: Fast, real-time search by recipe name with full Italian character support (à, è, ì, ò, ù)
+- **Multiple Seasons**: Assign multiple seasons to recipes (e.g., Pasta e Fagioli for both autumn and winter)
 - **Advanced Filtering**: Filter recipes by category, subcategory, and season simultaneously with live count updates
 
 <img width="1884" height="777" alt="image" src="https://github.com/user-attachments/assets/fa9cc1bd-f032-408a-9233-a1dd9e700dd8" />
@@ -134,6 +136,7 @@ The standout feature that sets Il Mio Ricettario apart:
 - **Custom 1440px Breakpoint**: Optimized for tablets to use mobile UI (better for cooking)
 - **Touch-Friendly**: Large tap targets, swipe gestures, and mobile-optimized interactions
 - **Responsive Tables**: Ingredient and step lists adapt gracefully to all screen sizes
+- **Apple Home Screen Icon**: Custom icon when adding the app to iOS/iPad home screen
 
 ---
 

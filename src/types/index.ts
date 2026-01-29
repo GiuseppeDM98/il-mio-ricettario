@@ -96,7 +96,7 @@ export interface Step {
  * - tutte_stagioni (All seasons): 🌍 - available year-round
  *
  * CHECKLIST: If you add a season value, update:
- * - SEASON_LABELS and SEASON_ICONS in season-selector.tsx
+ * - SEASON_ICONS, SEASON_LABELS, ALL_SEASONS in lib/constants/seasons.ts
  * - ITALIAN_SEASONAL_INGREDIENTS in api/suggest-category/route.ts
  * - ITALIAN_SEASONAL_INGREDIENTS in api/extract-recipes/route.ts
  */
@@ -125,7 +125,31 @@ export interface Recipe {
   description?: string;
   categoryId?: string;
   subcategoryId?: string;
+
+  /**
+   * SEASONS FIELD (migrated from single 'season'):
+   * - Array of Season values (multiple seasons supported)
+   * - Migration: Old recipes with 'season' field are auto-converted on first edit
+   * - Empty array or null = no seasonal restriction
+   * - ['tutte_stagioni'] = year-round availability
+   *
+   * WHY ARRAY:
+   * Italian recipes often span multiple seasons (e.g., Pasta e Fagioli
+   * is both autunno + inverno). Single season was too restrictive.
+   *
+   * BACKWARD COMPATIBILITY:
+   * Display and filter components support both old 'season' field and new 'seasons' array
+   * during transition period. Old recipes display correctly until user edits them.
+   */
+  seasons?: Season[];
+
+  /**
+   * @deprecated Use 'seasons' array instead. This field exists only for backward
+   * compatibility with recipes created before the multi-season migration.
+   * Will be removed once all recipes are migrated.
+   */
   season?: Season;
+
   aiSuggested?: boolean; // true if category/season suggested by AI (displays "✨ Suggerito da AI" badge)
   difficulty?: 'facile' | 'media' | 'difficile';
   tags: string[];

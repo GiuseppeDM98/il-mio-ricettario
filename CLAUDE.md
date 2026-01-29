@@ -1,6 +1,6 @@
 # Il Mio Ricettario - AI Developer Reference
 
-> **Status**: Phase 1 MVP - Production Ready | **Updated**: 2026-01-21
+> **Status**: Phase 1 MVP - Production Ready | **Updated**: 2026-01-29
 
 ## Quick Reference
 
@@ -43,9 +43,10 @@ src/
 │   ├── recipe/           # RecipeForm, RecipeCard, CategorySelector
 │   └── layout/           # Header, Sidebar, BottomNavigation
 ├── lib/
+│   ├── constants/        # seasons.ts (centralized season constants)
 │   ├── firebase/         # firestore.ts, categories.ts, cooking-sessions.ts
 │   ├── hooks/            # useAuth, useRecipes
-│   └── utils/            # recipe-parser.ts, ingredient-scaler.ts
+│   └── utils/            # recipe-parser.ts, ingredient-scaler.ts, search.ts
 └── types/                # Recipe, Ingredient, Step, Category, CookingSession
 ```
 
@@ -73,6 +74,13 @@ src/
 ---
 
 ## Recent Changes (Dec 2025 - Jan 2026)
+
+### Recipe Search & Multiple Seasons (Jan 2026)
+- **Recipe search**: Client-side title search with Italian character support (à, è, ì, ò, ù)
+- **Unicode NFD normalization**: Accent-insensitive matching for Italian cuisine
+- **Multiple seasons**: Recipes can now have multiple season tags (e.g., Pasta e Fagioli = autunno + inverno)
+- **Lazy migration**: Backward-compatible migration from single `season` to `seasons[]` array
+- **Centralized constants**: Season icons/labels in single source (`lib/constants/seasons.ts`)
 
 ### Cooking Mode Enhancements
 - **Setup screen pattern**: Prevents duplicate session creation

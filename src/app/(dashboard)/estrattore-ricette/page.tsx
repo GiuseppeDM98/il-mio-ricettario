@@ -152,12 +152,12 @@ export default function RecipeExtractorPage() {
    *
    * @param recipe - Parsed recipe data
    * @param categoryName - Creates category if missing
-   * @param season - Season tag for recipe
+   * @param seasons - Season tags array for recipe (supports multiple seasons)
    * @param index - Recipe index for state tracking
    *
    * Side effects: Firebase recipe write, potential category creation, category list refresh
    */
-  const handleSaveRecipe = async (recipe: ParsedRecipe, categoryName: string, season: Season, index: number) => {
+  const handleSaveRecipe = async (recipe: ParsedRecipe, categoryName: string, seasons: Season[], index: number) => {
     if (!user) return;
 
     // Set saving state
@@ -181,7 +181,7 @@ export default function RecipeExtractorPage() {
         steps: recipe.steps,
         categoryId: categoryId,
         subcategoryId: '',
-        season: season,
+        seasons: seasons.length > 0 ? seasons : undefined, // Multiple seasons support
         aiSuggested: recipe.aiSuggestion ? true : false,
         difficulty: 'media' as const,
         tags: [],
@@ -242,8 +242,9 @@ export default function RecipeExtractorPage() {
       if (!savedStates.has(i)) {
         const recipe = extractedRecipes[i];
         const categoryName = recipe.aiSuggestion?.categoryName || '';
-        const season = recipe.aiSuggestion?.season || 'tutte_stagioni';
-        await handleSaveRecipe(recipe, categoryName, season, i);
+        // Convert AI-suggested single season to array for multi-season support
+        const seasons: Season[] = recipe.aiSuggestion?.season ? [recipe.aiSuggestion.season] : ['tutte_stagioni'];
+        await handleSaveRecipe(recipe, categoryName, seasons, i);
       }
     }
 

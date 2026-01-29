@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card';
 import { ChevronDown, ChevronUp, Check, Clock, Users, Sparkles } from 'lucide-react';
 import { Season } from '@/types';
 import { Input } from '@/components/ui/input';
+import { SeasonSelector } from './season-selector';
 
 /**
  * ExtractedRecipePreview - Preview card for AI-extracted recipes
@@ -28,26 +29,10 @@ import { Input } from '@/components/ui/input';
 interface ExtractedRecipePreviewProps {
   recipe: ParsedRecipe;
   index: number;
-  onSave: (recipe: ParsedRecipe, categoryName: string, season: Season) => void;
+  onSave: (recipe: ParsedRecipe, categoryName: string, seasons: Season[]) => void; // Changed from single season to array
   isSaving?: boolean;
   isSaved?: boolean;
 }
-
-const SEASON_ICONS: Record<Season, string> = {
-  primavera: '🌸',
-  estate: '☀️',
-  autunno: '🍂',
-  inverno: '❄️',
-  tutte_stagioni: '🌍'
-};
-
-const SEASON_LABELS: Record<Season, string> = {
-  primavera: 'Primavera',
-  estate: 'Estate',
-  autunno: 'Autunno',
-  inverno: 'Inverno',
-  tutte_stagioni: 'Tutte le stagioni'
-};
 
 export function ExtractedRecipePreview({
   recipe,
@@ -60,9 +45,15 @@ export function ExtractedRecipePreview({
   const [selectedCategory, setSelectedCategory] = useState(
     recipe.aiSuggestion?.categoryName || ''
   );
-  const [selectedSeason, setSelectedSeason] = useState<Season>(
-    recipe.aiSuggestion?.season || 'tutte_stagioni'
-  );
+
+  /**
+   * Initialize with AI suggestion (single season) as array.
+   * User can add more seasons via multi-select before saving.
+   */
+  const [selectedSeasons, setSelectedSeasons] = useState<Season[]>(() => {
+    const aiSeason = recipe.aiSuggestion?.season;
+    return aiSeason ? [aiSeason] : ['tutte_stagioni'];
+  });
 
   // ========================================
   // Group ingredients and steps by section
@@ -153,28 +144,11 @@ export function ExtractedRecipePreview({
               </div>
 
               {/* Season Selector */}
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-2">
-                  Stagione
-                </label>
-                <div className="flex gap-2 flex-wrap">
-                  {(Object.keys(SEASON_ICONS) as Season[]).map((season) => (
-                    <button
-                      key={season}
-                      type="button"
-                      onClick={() => setSelectedSeason(season)}
-                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        selectedSeason === season
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-                      }`}
-                    >
-                      <span className="mr-1">{SEASON_ICONS[season]}</span>
-                      {SEASON_LABELS[season]}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <SeasonSelector
+                selectedSeasons={selectedSeasons}
+                onSeasonsChange={setSelectedSeasons}
+                aiSuggested={!!recipe.aiSuggestion}
+              />
             </div>
           )}
         </div>
@@ -201,7 +175,7 @@ export function ExtractedRecipePreview({
           </Button>
           <Button
             type="button"
-            onClick={() => onSave(recipe, selectedCategory, selectedSeason)}
+            onClick={() => onSave(recipe, selectedCategory, selectedSeasons)}
             disabled={isSaving || isSaved}
             size="sm"
           >
