@@ -24,7 +24,7 @@ Digital recipe book with AI-powered PDF extraction. Text-focused, privacy-first,
 
 | Layer | Technology |
 |-------|------------|
-| Frontend | Next.js 14.2, React 18, TypeScript 5.3, Tailwind CSS 3.4 |
+| Frontend | Next.js 16.1.6, React 18.2, TypeScript 5.3, Tailwind CSS 3.4 |
 | Backend | Firebase Auth + Firestore, Claude API (claude-sonnet-4-5) |
 | Key Utils | `nosleep.js` (wake lock), `ingredient-scaler.ts` (quantity scaling) |
 
